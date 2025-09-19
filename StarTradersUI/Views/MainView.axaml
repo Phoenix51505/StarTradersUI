@@ -11,7 +11,7 @@
          to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
     <vm:MainViewModel />
   </Design.DataContext>
-  <StackPanel>
+  <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center">
     <Border Margin="5" CornerRadius="1" Background="LightBlue">
       <Grid ShowGridLines="True" Margin="5" 
         ColumnDefinitions="75, Auto, Auto"
@@ -21,7 +21,7 @@
         <TextBox Grid.Row="1" Grid.Column="1">Agent Token</TextBox>
         <Label Grid.Row="2" Grid.Column="1" HorizontalAlignment="Center">Or register a new Agent</Label>
         <TextBox Grid.Row="3" Grid.Column="1">Account Token</TextBox>
-        <TextBox Grid.Row="4" Grid.Column="1">New Agent Symbol</TextBox>
+        <TextBox Grid.Row="4" Grid.Column="1">New Agent Symbol</TextBox>  
         <ComboBox PlaceholderText="Agent Faction" Grid.Row="5" Grid.Column="1" x:Name="factionComboBox" Width="205">
           <ComboBox.ItemTemplate>
             <DataTemplate>
