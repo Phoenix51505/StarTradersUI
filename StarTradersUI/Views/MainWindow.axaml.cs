@@ -3,7 +3,7 @@ using System.Net.Http;
 using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using StarTradersUI.Api;
+using StarTradersUI;
 namespace StarTradersUI.Views;
 
 public partial class MainWindow : Window
@@ -14,7 +14,7 @@ public partial class MainWindow : Window
     }
     private async void Window_Loaded(object sender, RoutedEventArgs e)
     {
-        {
+        /*{
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,
@@ -23,6 +23,6 @@ public partial class MainWindow : Window
             using var response = await GlobalStates.client.SendAsync(request);
             response.EnsureSuccessStatusCode();
             var factionList = await response.Content.ReadAsStringAsync();
-        }
+        }*/
     }
 }

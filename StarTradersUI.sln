@@ -7,8 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StarTradersUI", "StarTrader
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StarTradersUI.Desktop", "StarTradersUI.Desktop\StarTradersUI.Desktop.csproj", "{84E899A9-77E5-A3FF-5B87-B8DAD524BD75}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StarTradersUi.Scratch", "StarTradersUi.Scratch\StarTradersUi.Scratch.csproj", "{799A317D-0E00-48D3-9C42-A3512EF62A01}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StarTradersUi.Api", "StarTradersUi.Api\StarTradersUi.Api.csproj", "{10C842EA-22FF-4B5D-9364-9D19BFC5BB94}"
 EndProject
 Global

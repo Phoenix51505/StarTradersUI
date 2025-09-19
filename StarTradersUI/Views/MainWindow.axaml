@@ -10,4 +10,10 @@
         Title="StarTradersUI"
         Loaded="Window_Loaded">
         <views:MainView />
+        <Window.Background>
+                <LinearGradientBrush StartPoint="0%,100%" EndPoint="100%,0%">
+                        <GradientStop Color="#17153c" Offset="0.0"/>
+                        <GradientStop Color="#030009" Offset="1.0"/>
+                </LinearGradientBrush> 
+        </Window.Background>
 </Window>
