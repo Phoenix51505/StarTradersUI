@@ -1,4 +1,4 @@
-namespace StarTradersUi.Api;
+namespace StarTradersUI.Api;
 
 public class Traits
 {

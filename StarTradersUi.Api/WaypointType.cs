@@ -1,36 +1,35 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Runtime.Serialization;
 
-namespace StarTradersUi.Api;
+namespace StarTradersUI.Api;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum WaypointType
 {
-    [JsonStringEnumMemberName("PLANET")]
+    [EnumMember(Value = "PLANET")]
     Planet,
-    [JsonStringEnumMemberName("GAS_GIANT")]
+    [EnumMember(Value = "GAS_GIANT")]
     GasGiant,
-    [JsonStringEnumMemberName("MOON")]
+    [EnumMember(Value = "MOON")]
     Moon,
-    [JsonStringEnumMemberName("ORBITAL_STATION")]
+    [EnumMember(Value = "ORBITAL_STATION")]
     OrbitalStation,
-    [JsonStringEnumMemberName("JUMP_GATE")]
+    [EnumMember(Value = "JUMP_GATE")]
     JumpGate,
-    [JsonStringEnumMemberName("ASTEROID_FIELD")]
+    [EnumMember(Value = "ASTEROID_FIELD")]
     AsteroidField,
-    [JsonStringEnumMemberName("ASTEROID")]
+    [EnumMember(Value = "ASTEROID")]
     Asteroid,
-    [JsonStringEnumMemberName("ENGINEERED_ASTEROID")]
+    [EnumMember(Value = "ENGINEERED_ASTEROID")]
     EngineeredAsteroid,
-    [JsonStringEnumMemberName("ASTEROID_BASE")]
+    [EnumMember(Value = "ASTEROID_BASE")]
     AsteroidBase,
-    [JsonStringEnumMemberName("NEBULA")]
+    [EnumMember(Value = "NEBULA")]
     Nebula,
-    [JsonStringEnumMemberName("DEBRIS_FIELD")]
+    [EnumMember(Value = "DEBRIS_FIELD")]
     DebrisField,
-    [JsonStringEnumMemberName("GRAVITY_WELL")]
+    [EnumMember(Value = "GRAVITY_WELL")]
     GravityWell,
-    [JsonStringEnumMemberName("ARTIFICIAL_GRAVITY_WELL")]
+    [EnumMember(Value = "ARTIFICIAL_GRAVITY_WELL")]
     ArtificialGravityWell,
-    [JsonStringEnumMemberName("FUEL_STATION")]
+    [EnumMember(Value = "FUEL_STATION")]
     FuelStation,
 }

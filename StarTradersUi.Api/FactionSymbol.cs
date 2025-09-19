@@ -1,46 +1,45 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Runtime.Serialization;
 
-namespace StarTradersUi.Api;
+namespace StarTradersUI.Api;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum FactionSymbol
 {
-    [JsonStringEnumMemberName("COSMIC")]
+    [EnumMember(Value = "COSMIC")]
     Cosmic,
-    [JsonStringEnumMemberName("VOID")]
+    [EnumMember(Value = "VOID")]
     Void,
-    [JsonStringEnumMemberName("GALACTIC")]
+    [EnumMember(Value = "GALACTIC")]
     Galactic,
-    [JsonStringEnumMemberName("QUANTUM")]
+    [EnumMember(Value = "QUANTUM")]
     Quantum,
-    [JsonStringEnumMemberName("DOMINION")]
+    [EnumMember(Value = "DOMINION")]
     Dominion,
-    [JsonStringEnumMemberName("ASTRO")]
+    [EnumMember(Value = "ASTRO")]
     Astro,
-    [JsonStringEnumMemberName("CORSAIRS")]
+    [EnumMember(Value = "CORSAIRS")]
     Corsairs,
-    [JsonStringEnumMemberName("OBSIDIAN")]
+    [EnumMember(Value = "OBSIDIAN")]
     Obsidian,
-    [JsonStringEnumMemberName("AEGIS")]
+    [EnumMember(Value = "AEGIS")]
     Aegis,
-    [JsonStringEnumMemberName("UNITED")]
+    [EnumMember(Value = "UNITED")]
     United,
-    [JsonStringEnumMemberName("SOLITARY")]
+    [EnumMember(Value = "SOLITARY")]
     Solitary,
-    [JsonStringEnumMemberName("COBALT")]
+    [EnumMember(Value = "COBALT")]
     Cobalt,
-    [JsonStringEnumMemberName("OMEGA")]
+    [EnumMember(Value = "OMEGA")]
     Omega,
-    [JsonStringEnumMemberName("ECHO")]
+    [EnumMember(Value = "ECHO")]
     Echo,
-    [JsonStringEnumMemberName("LORDS")]
+    [EnumMember(Value = "LORDS")]
     Lords,
-    [JsonStringEnumMemberName("CULT")]
+    [EnumMember(Value = "CULT")]
     Cult,
-    [JsonStringEnumMemberName("ANCIENTS")]
+    [EnumMember(Value = "ANCIENTS")]
     Ancients,
-    [JsonStringEnumMemberName("SHADOW")]
+    [EnumMember(Value = "SHADOW")]
     Shadow,
-    [JsonStringEnumMemberName("ETHEREAL")]
+    [EnumMember(Value = "ETHEREAL")]
     Ethereal,
 }

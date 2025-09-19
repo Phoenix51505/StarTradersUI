@@ -1,126 +1,125 @@
-using System.Text.Json.Serialization;
+using System.Runtime.Serialization;
 
-namespace StarTradersUi.Api;
+namespace StarTradersUI.Api;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum FactionTraitSymbol
 {
-    [JsonStringEnumMemberName("BUREAUCRATIC")]
-    Bureucratic,
-    [JsonStringEnumMemberName("SECRETIVE")]
+    [EnumMember(Value = "BUREAUCRATIC")]
+    Bureaucratic,
+    [EnumMember(Value = "SECRETIVE")]
     Secretive,
-    [JsonStringEnumMemberName("CAPITALISTIC")]
+    [EnumMember(Value = "CAPITALISTIC")]
     Capitalistic,
-    [JsonStringEnumMemberName("INDUSTRIOUS")]
+    [EnumMember(Value = "INDUSTRIOUS")]
     Industrious,
-    [JsonStringEnumMemberName("PEACEFUL")]
+    [EnumMember(Value = "PEACEFUL")]
     Peaceful,
-    [JsonStringEnumMemberName("DISTRUSTFUL")]
+    [EnumMember(Value = "DISTRUSTFUL")]
     Distrustful,
-    [JsonStringEnumMemberName("WELCOMING")]
+    [EnumMember(Value = "WELCOMING")]
     Welcoming,
-    [JsonStringEnumMemberName("SMUGGLERS")]
+    [EnumMember(Value = "SMUGGLERS")]
     Smugglers,
-    [JsonStringEnumMemberName("SCAVENGERS")]
+    [EnumMember(Value = "SCAVENGERS")]
     Scavengers,
-    [JsonStringEnumMemberName("REBELLIOUS")]
+    [EnumMember(Value = "REBELLIOUS")]
     Rebellious,
-    [JsonStringEnumMemberName("EXILES")]
+    [EnumMember(Value = "EXILES")]
     Exiles,
-    [JsonStringEnumMemberName("PIRATES")]
+    [EnumMember(Value = "PIRATES")]
     Pirates,
-    [JsonStringEnumMemberName("RAIDERS")]
+    [EnumMember(Value = "RAIDERS")]
     Raiders,
-    [JsonStringEnumMemberName("CLAN")]
+    [EnumMember(Value = "CLAN")]
     Clan,
-    [JsonStringEnumMemberName("GUILD")]
+    [EnumMember(Value = "GUILD")]
     Guild,
-    [JsonStringEnumMemberName("DOMINION")]
+    [EnumMember(Value = "DOMINION")]
     Dominion,
-    [JsonStringEnumMemberName("FRINGE")]
+    [EnumMember(Value = "FRINGE")]
     Fringe,
-    [JsonStringEnumMemberName("FORSAKEN")]
+    [EnumMember(Value = "FORSAKEN")]
     Forsaken,
-    [JsonStringEnumMemberName("ISOLATED")]
+    [EnumMember(Value = "ISOLATED")]
     Isolated,
-    [JsonStringEnumMemberName("LOCALIZED")]
+    [EnumMember(Value = "LOCALIZED")]
     Localized,
-    [JsonStringEnumMemberName("ESTABLISHED")]
+    [EnumMember(Value = "ESTABLISHED")]
     Established,
-    [JsonStringEnumMemberName("NOTABLE")]
+    [EnumMember(Value = "NOTABLE")]
     Notable,
-    [JsonStringEnumMemberName("DOMINANT")]
+    [EnumMember(Value = "DOMINANT")]
     Dominant,
-    [JsonStringEnumMemberName("INESCAPABLE")]
+    [EnumMember(Value = "INESCAPABLE")]
     INESCAPABLE,
-    [JsonStringEnumMemberName("INNOVATIVE")]
+    [EnumMember(Value = "INNOVATIVE")]
     Innovative,
-    [JsonStringEnumMemberName("BOLD")]
+    [EnumMember(Value = "BOLD")]
     Bold,
-    [JsonStringEnumMemberName("VISIONARY")]
+    [EnumMember(Value = "VISIONARY")]
     Visionary,
-    [JsonStringEnumMemberName("CURIOUS")]
+    [EnumMember(Value = "CURIOUS")]
     Curious,
-    [JsonStringEnumMemberName("DARING")]
+    [EnumMember(Value = "DARING")]
     Daring,
-    [JsonStringEnumMemberName("EXPLORATORY")]
+    [EnumMember(Value = "EXPLORATORY")]
     Exploratory,
-    [JsonStringEnumMemberName("RESOURCEFUL")]
+    [EnumMember(Value = "RESOURCEFUL")]
     Resourceful,
-    [JsonStringEnumMemberName("FLEXIBLE")]
+    [EnumMember(Value = "FLEXIBLE")]
     Flexible,
-    [JsonStringEnumMemberName("COOPERATIVE")]
+    [EnumMember(Value = "COOPERATIVE")]
     Cooperative,
-    [JsonStringEnumMemberName("UNITED")]
+    [EnumMember(Value = "UNITED")]
     United,
-    [JsonStringEnumMemberName("STRATEGIC")]
+    [EnumMember(Value = "STRATEGIC")]
     Strategic,
-    [JsonStringEnumMemberName("INTELLIGENT")]
+    [EnumMember(Value = "INTELLIGENT")]
     Intelligent,
-    [JsonStringEnumMemberName("RESEARCH_FOCUSED")]
+    [EnumMember(Value = "RESEARCH_FOCUSED")]
     ResearchFocused,
-    [JsonStringEnumMemberName("COLLABORATIVE")]
+    [EnumMember(Value = "COLLABORATIVE")]
     Collaborative,
-    [JsonStringEnumMemberName("PROGRESSIVE")]
+    [EnumMember(Value = "PROGRESSIVE")]
     Progressive,
-    [JsonStringEnumMemberName("MILITARISTIC")]
+    [EnumMember(Value = "MILITARISTIC")]
     Militaristic,
-    [JsonStringEnumMemberName("TECHNOLOGICALLY_ADVANCED")]
+    [EnumMember(Value = "TECHNOLOGICALLY_ADVANCED")]
     TechnologicallyAdvanced,
-    [JsonStringEnumMemberName("AGGRESSIVE")]
+    [EnumMember(Value = "AGGRESSIVE")]
     Aggressive,
-    [JsonStringEnumMemberName("IMPERIALISTIC")]
+    [EnumMember(Value = "IMPERIALISTIC")]
     Imperialistic,
-    [JsonStringEnumMemberName("TREASURE_HUNTERS")]
+    [EnumMember(Value = "TREASURE_HUNTERS")]
     TreasureHunters,
-    [JsonStringEnumMemberName("DEXTEROUS")]
+    [EnumMember(Value = "DEXTEROUS")]
     Dexterous,
-    [JsonStringEnumMemberName("UNPREDICTABLE")]
+    [EnumMember(Value = "UNPREDICTABLE")]
     Unpredictable,
-    [JsonStringEnumMemberName("BRUTAL")]
+    [EnumMember(Value = "BRUTAL")]
     Brutal,
-    [JsonStringEnumMemberName("FLEETING")]
+    [EnumMember(Value = "FLEETING")]
     Fleeting,
-    [JsonStringEnumMemberName("ADAPTABLE")]
+    [EnumMember(Value = "ADAPTABLE")]
     Adaptable,
-    [JsonStringEnumMemberName("SELF_SUFFICIENT")]
+    [EnumMember(Value = "SELF_SUFFICIENT")]
     Self_Sufficient,
-    [JsonStringEnumMemberName("DEFENSIVE")]
+    [EnumMember(Value = "DEFENSIVE")]
     Defensive,
-    [JsonStringEnumMemberName("PROUD")]
+    [EnumMember(Value = "PROUD")]
     Proud,
-    [JsonStringEnumMemberName("DIVERSE")]
+    [EnumMember(Value = "DIVERSE")]
     Diverse,
-    [JsonStringEnumMemberName("INDEPENDENT")]
+    [EnumMember(Value = "INDEPENDENT")]
     Independent,
-    [JsonStringEnumMemberName("SELF_INTERESTED")]
+    [EnumMember(Value = "SELF_INTERESTED")]
     SelfInterested,
-    [JsonStringEnumMemberName("FRAGMENTED")]
+    [EnumMember(Value = "FRAGMENTED")]
     Fragmented,
-    [JsonStringEnumMemberName("COMMERCIAL")]
+    [EnumMember(Value = "COMMERCIAL")]
     Commercial,
-    [JsonStringEnumMemberName("FREE_MARKETS")]
+    [EnumMember(Value = "FREE_MARKETS")]
     FreeMarkets,
-    [JsonStringEnumMemberName("ENTREPRENEURIAL")]
+    [EnumMember(Value = "ENTREPRENEURIAL")]
     Entrepreneurial,
 }

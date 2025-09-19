@@ -1,28 +1,27 @@
-﻿using System.Text.Json.Serialization;
+﻿using System.Runtime.Serialization;
 
-namespace StarTradersUi.Api;
+namespace StarTradersUI.Api;
 
-[JsonConverter(typeof(JsonStringEnumConverter))]
 public enum SystemType
 {
-    [JsonStringEnumMemberName("NEUTRON_STAR")]
+    [EnumMember(Value = "NEUTRON_STAR")]
     NeutronStar,
-    [JsonStringEnumMemberName("RED_STAR")]
+    [EnumMember(Value = "RED_STAR")]
     RedStar,
-    [JsonStringEnumMemberName("ORANGE_STAR")]
+    [EnumMember(Value = "ORANGE_STAR")]
     OrangeStar,
-    [JsonStringEnumMemberName("BLUE_STAR")]
+    [EnumMember(Value = "BLUE_STAR")]
     BlueStar,
-    [JsonStringEnumMemberName("YOUNG_STAR")]
+    [EnumMember(Value = "YOUNG_STAR")]
     YoungStar,
-    [JsonStringEnumMemberName("WHITE_DWARF")]
+    [EnumMember(Value = "WHITE_DWARF")]
     WhiteDwarf,
-    [JsonStringEnumMemberName("BLACK_HOLE")]
+    [EnumMember(Value = "BLACK_HOLE")]
     BlackHole,
-    [JsonStringEnumMemberName("HYPERGIANT")]
+    [EnumMember(Value = "HYPERGIANT")]
     Hypergiant,
-    [JsonStringEnumMemberName("NEBULA")]
+    [EnumMember(Value = "NEBULA")]
     Nebula,
-    [JsonStringEnumMemberName("UNSTABLE")]
+    [EnumMember(Value = "UNSTABLE")]
     Unstable,
 }
