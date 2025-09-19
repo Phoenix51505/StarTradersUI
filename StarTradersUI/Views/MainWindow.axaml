@@ -7,6 +7,7 @@
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="StarTradersUI.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
-        Title="StarTradersUI">
+        Title="StarTradersUI"
+        Loaded="Window_Loaded">
         <views:MainView />
 </Window>
