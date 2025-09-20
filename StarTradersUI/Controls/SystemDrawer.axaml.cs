@@ -25,9 +25,9 @@ public partial class SystemDrawer : UserControl
     // This is meant to draw the entire system, including waypoints when zoomed in far enough
 
 
-    public double ViewportCenterX;
-    public double ViewportCenterY;
-    public double ViewportScale = MaxScale / 2; // This is the width of the Viewport in universe units
+    public double ViewportCenterX = 377; // This will change
+    public double ViewportCenterY = -392; // This will change
+    public double ViewportScale = 15; // MaxScale / 2; // This is the width of the Viewport in universe units
     public bool IsDragging;
 
     private const double SystemViewLoadUpp = 0.5; // 100 pixels wide is how big we want to load in a system
@@ -107,13 +107,17 @@ public partial class SystemDrawer : UserControl
                 var closestSystem = GlobalStates.SystemTree.ClosestTo(ViewportCenterX, ViewportCenterY)!;
                 if (!ReferenceEquals(closestSystem, _waypointParentSystemInfo))
                 {
-                    var distanceToOther = closestSystem.DistanceTo(CenterX, CenterY);
-                    var distanceToCurrent = _waypointParentSystemInfo.DistanceTo(CenterX, CenterY);
+                    var distanceToOther = closestSystem.DistanceTo(ViewportCenterX, ViewportCenterY);
+                    var distanceToCurrent = _waypointParentSystemInfo.DistanceTo(ViewportCenterX, ViewportCenterY);
                     if (distanceToCurrent > distanceToOther * 0.33)
                     {
                         DispatchWaypointUpdate(closestSystem);
                     }
                 }
+            } else if (_initialized && UniverseUnitsPerPixel <= SystemViewLoadUpp)
+            {
+                var closestSystem = GlobalStates.SystemTree.ClosestTo(ViewportCenterX, ViewportCenterY)!;
+                DispatchWaypointUpdate(closestSystem);
             }
 
             InvalidateVisual();
@@ -165,8 +169,24 @@ public partial class SystemDrawer : UserControl
             // Unload the waypoints here
             DispatchWaypointClear();
         }
-        
-        if ((newUnitsPerPixel < SystemViewLoadUpp || _waypointParentSystemInfo != null) && _initialized)
+
+
+        if (_waypointParentSystemInfo != null)
+        {
+            
+            var closestSystem = GlobalStates.SystemTree.ClosestTo(ViewportCenterX, ViewportCenterY)!;
+            if (!ReferenceEquals(closestSystem, _waypointParentSystemInfo))
+            {
+                
+                var distanceToOther = closestSystem.DistanceTo(ViewportCenterX, ViewportCenterY);
+                var distanceToCurrent = _waypointParentSystemInfo.DistanceTo(ViewportCenterX, ViewportCenterY);
+                if (distanceToCurrent > distanceToOther * 0.33)
+                {
+                    DispatchWaypointUpdate(closestSystem);
+                }
+            }
+        }
+        if (newUnitsPerPixel < SystemViewLoadUpp && _initialized && _waypointParentSystemInfo == null)
         {
             var closestSystem = GlobalStates.SystemTree.ClosestTo(ViewportCenterX, ViewportCenterY)!;
             DispatchWaypointUpdate(closestSystem);
@@ -506,23 +526,25 @@ public partial class SystemDrawer : UserControl
                     DrawSpotted<WaypointInformation>(MoonBrush));
                 break;
             case WaypointType.OrbitalStation:
-                DrawWaypoint(context, OrbitalStationBrush, centerPoint, baseSizeInPixels, waypoint);
+                DrawWaypoint(context, OrbitalStationBrush, centerPoint, baseSizeInPixels, waypoint, DrawOrbitalStation);
                 break;
             case WaypointType.JumpGate:
                 DrawWaypoint(context, JumpGateBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawWell(JumpGateBrush, 5, 1 / 20d));
+                    DrawWell(JumpGateBrush, 2, 1 / 20d));
                 break;
             case WaypointType.AsteroidField:
-                DrawWaypoint(context, AsteroidFieldBrush, centerPoint, baseSizeInPixels, waypoint);
+                DrawWaypoint(context, AsteroidFieldBrush, centerPoint, baseSizeInPixels, waypoint,
+                    DrawSpotted<WaypointInformation>(null!, AsteroidFieldBrush,
+                        new SolidColorBrush(Colors.Transparent)));
                 break;
             case WaypointType.Asteroid:
-                DrawWaypoint(context, AsteroidBrush, centerPoint, baseSizeInPixels, waypoint);
+                DrawWaypoint(context, AsteroidBrush, centerPoint, baseSizeInPixels, waypoint, DrawAsteroid);
                 break;
             case WaypointType.EngineeredAsteroid:
-                DrawWaypoint(context, EngineeredAsteroidBrush, centerPoint, baseSizeInPixels, waypoint);
+                DrawWaypoint(context, EngineeredAsteroidBrush, centerPoint, baseSizeInPixels, waypoint, DrawEngineeredAsteroid);
                 break;
             case WaypointType.AsteroidBase:
-                DrawWaypoint(context, AsteroidBaseBrush, centerPoint, baseSizeInPixels, waypoint);
+                DrawWaypoint(context, AsteroidBaseBrush, centerPoint, baseSizeInPixels, waypoint, DrawAsteroidBase);
                 break;
             case WaypointType.Nebula:
                 DrawWaypoint(context, NebulaDefaultBrush, centerPoint, baseSizeInPixels, waypoint,
@@ -534,14 +556,14 @@ public partial class SystemDrawer : UserControl
                 break;
             case WaypointType.GravityWell:
                 DrawWaypoint(context, GravityWellBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawWell(GravityWellBrush, 15, 1 / 40d));
+                    DrawWell(GravityWellBrush, 10, 1 / 60d));
                 break;
             case WaypointType.ArtificialGravityWell:
                 DrawWaypoint(context, ArtificialGravityWellBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawWell(ArtificialGravityWellBrush, 15, 1 / 40d));
+                    DrawWell(ArtificialGravityWellBrush, 10, 1 / 60d));
                 break;
             case WaypointType.FuelStation:
-                DrawWaypoint(context, FuelStationBrush, centerPoint, baseSizeInPixels, waypoint);
+                DrawWaypoint(context, FuelStationBrush, centerPoint, baseSizeInPixels, waypoint, DrawFuelStation);
                 break;
             default:
                 throw new ArgumentOutOfRangeException();
@@ -632,6 +654,132 @@ public partial class SystemDrawer : UserControl
         }
     }
 
+    private void DrawOrbitalStation(DrawingContext context, Point location, double scaledSize,
+        WaypointInformation waypoint)
+    {
+        // What do we want, hmmm, maybe like a rounded line down the center, and 2 spokes out to the side, the left being orange, and the right being blue
+        var coreBrush = Brushes.LightSlateGray;
+        var coreWidth = Math.Max(1, scaledSize / 15);
+        var corePen = new Pen(coreBrush, coreWidth, lineCap: PenLineCap.Round);
+        var panelBrush = OrbitalStationBrush;
+        context.DrawRectangle(panelBrush, null,
+            new Rect(location.X - scaledSize / 2 + coreWidth / 2, location.Y - scaledSize / 2, scaledSize / 3,
+                scaledSize));
+        context.DrawRectangle(panelBrush, null,
+            new Rect(location.X + scaledSize / 6 - coreWidth / 2, location.Y - scaledSize / 2, scaledSize / 3,
+                scaledSize));
+        context.DrawLine(corePen, new Point(location.X, location.Y - scaledSize / 2 + coreWidth / 2),
+            new Point(location.X, location.Y + scaledSize / 2 - coreWidth / 2));
+        context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y - scaledSize / 4),
+            new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y - scaledSize / 4));
+        context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y),
+            new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y));
+        context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y + scaledSize / 4),
+            new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y + scaledSize / 4));
+    }
+
+    private void DrawFuelStation(DrawingContext context, Point location, double scaledSize, WaypointInformation waypoint)
+    {
+        var coreBrush = Brushes.LightSlateGray;
+        var coreWidth = Math.Max(1, scaledSize / 15);
+        var corePen = new Pen(coreBrush, coreWidth, lineCap: PenLineCap.Round);
+        var tankBrush = FuelStationBrush;
+        context.DrawRectangle(tankBrush, null,
+            new Rect(location.X - scaledSize / 3, location.Y - scaledSize / 2, 2 * scaledSize / 3, scaledSize), radiusX: scaledSize/20, radiusY:scaledSize/20);
+        context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y - scaledSize / 4),
+            new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y - scaledSize / 4));
+        context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y),
+            new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y));
+        context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y + scaledSize / 4),
+            new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y + scaledSize / 4));
+    }
+
+    private static readonly (double x, double y)[][] AsteroidPoints =
+    [
+        GenerateAsteroidPoints(10), GenerateAsteroidPoints(10), GenerateAsteroidPoints(10), GenerateAsteroidPoints(10),
+        GenerateAsteroidPoints(15), GenerateAsteroidPoints(15), GenerateAsteroidPoints(15), GenerateAsteroidPoints(15),
+        GenerateAsteroidPoints(20), GenerateAsteroidPoints(20), GenerateAsteroidPoints(20), GenerateAsteroidPoints(20),
+        GenerateAsteroidPoints(25), GenerateAsteroidPoints(25), GenerateAsteroidPoints(25), GenerateAsteroidPoints(25),
+        GenerateAsteroidPoints(30), GenerateAsteroidPoints(30), GenerateAsteroidPoints(30), GenerateAsteroidPoints(30),
+    ];
+
+    private static (double x, double y)[] GenerateAsteroidPoints(int size)
+    {
+        var result = new (double x, double y)[size];
+        var thetaStep = 2 * Math.PI / size;
+        var random = new Random();
+        for (var i = 0; i < size; i++)
+        {
+            var theta = i * thetaStep;
+            var r = Math.Sqrt(Uniform(0.25, 1)); // 0.5 squared, 1 squared, 
+            var x = r * Math.Cos(theta);
+            var y = r * Math.Sin(theta);
+            result[i] = (x, y);
+        }
+
+        return result;
+
+        double Uniform(double min, double max)
+        {
+            var distance = max - min;
+            var value = random.NextDouble();
+            return (value * distance) + min;
+        }
+    }
+
+    private void DrawAsteroid(DrawingContext context, Point location, double scaledSize, WaypointInformation waypoint)
+    {
+        var streamGeometry = new StreamGeometry();
+        using (var ctx = streamGeometry.Open())
+        {
+            var points = AsteroidPoints[Math.Abs(waypoint.GetHashCode()) % AsteroidPoints.Length];
+            var start = points[0];
+            ctx.BeginFigure(new Point(location.X + start.x * scaledSize / 2, location.Y + start.y * scaledSize / 2),
+                true);
+            for (var i = 1; i < points.Length; i++)
+            {
+                var point = points[i];
+                ctx.LineTo(new Point(location.X + point.x * scaledSize / 2, location.Y + point.y * scaledSize / 2));
+            }
+
+            ctx.EndFigure(true);
+        }
+
+        context.DrawGeometry(AsteroidBrush, null, streamGeometry);
+    }
+    
+    private void DrawEngineeredAsteroid(DrawingContext context, Point location, double scaledSize, WaypointInformation waypoint)
+    {
+        var streamGeometry = new StreamGeometry();
+        using (var ctx = streamGeometry.Open())
+        {
+            var points = AsteroidPoints[Math.Abs(waypoint.GetHashCode()) % AsteroidPoints.Length];
+            var start = points[0];
+            ctx.BeginFigure(new Point(location.X + start.x * scaledSize / 2.1, location.Y + start.y * scaledSize / 2.1),
+                true);
+            for (var i = 1; i < points.Length; i++)
+            {
+                var point = points[i];
+                ctx.LineTo(new Point(location.X + point.x * scaledSize / 2.1, location.Y + point.y * scaledSize / 2.1));
+            }
+
+            ctx.EndFigure(true);
+        }
+
+        var pen = new Pen(Brushes.OrangeRed, scaledSize / 40d);
+
+        context.DrawGeometry(AsteroidBrush, pen, streamGeometry);
+    }
+
+    private static readonly Brush AsteroidBaseAtmosphere = new SolidColorBrush();
+    private void DrawAsteroidBase(DrawingContext context, Point location, double scaledSize,
+        WaypointInformation waypoint)
+    {
+        var baseAtmosphere = new SolidColorBrush(new Color(127, 173, 216, 230));
+        DrawEngineeredAsteroid(context, location, scaledSize, waypoint);
+        context.DrawEllipse(baseAtmosphere,null,location,scaledSize/2,scaledSize/2);
+    }
+
     #endregion
 
     #region Utilities
@@ -692,11 +840,11 @@ public partial class SystemDrawer : UserControl
 
     private void DispatchWaypointUpdate(SystemInformation currentSystemInfo)
     {
-        _source.Cancel();
         if (_lastUpdateSystem == currentSystemInfo)
         {
             return;
         }
+        _source.Cancel();
 
         if (currentSystemInfo.CachedWaypoints != null &&
             currentSystemInfo.CachedWaypointsGeneration == _waypointCacheGeneration)
