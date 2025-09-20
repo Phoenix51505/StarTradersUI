@@ -25,7 +25,7 @@ public static class GlobalStates
         GlobalServerInformation = (await client.GetJsonAsync<ServerInformation>("https://api.spacetraders.io/v2/"))!;
         GlobalDataCache = new DataCache("./Cache", GlobalServerInformation.ResetDate);
         
-        var systemData = await client.GetAllPaginatedData<Api.System>("https://api.spacetraders.io/v2/systems","systems");
+        var systemData = await client.GetAllPaginatedData<Api.SystemInfo.System>("https://api.spacetraders.io/v2/systems","systems");
         var minX = systemData.Min(x => x.X);
         var minY = systemData.Min(x => x.Y);
         var maxX = systemData.Max(x => x.X);

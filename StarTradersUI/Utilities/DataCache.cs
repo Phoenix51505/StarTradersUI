@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Threading.Tasks;
 using StarTradersUI.Api;
 
@@ -29,30 +30,30 @@ public class DataCache
         File.WriteAllText(folder + "/last_updated.txt", lastUpdate.ToBinary().ToString());
     }
 
-    public async Task<T?> TryGet<T>(string key) where T : class
+    public async Task<T?> TryGet<T>(string key, CancellationToken ct = default) where T : class
     {
         if (!File.Exists(_folder + "/" + key + ".json")) return null;
 
         using var f = new StreamReader(_folder + "/" + key + ".json");
-        var result = await JsonUtils.FromJson<T>(f.BaseStream);
+        var result = await JsonUtils.FromJson<T>(f.BaseStream, ct);
         return result;
     }
 
-    public async Task Set<T>(string key, T value) where T : class
+    public async Task Set<T>(string key, T value, CancellationToken ct=default) where T : class
     {
         if (!File.Exists(_folder + "/" + key + ".json"))
         {
             var directory = Path.GetDirectoryName(_folder + "/" + key + ".json");
             Directory.CreateDirectory(directory!);
             await using var f = File.Create(_folder + "/" + key + ".json");
-            await JsonUtils.ToJson(value, f);
-            await f.FlushAsync();
+            await JsonUtils.ToJson(value, f, ct);
+            await f.FlushAsync(ct);
         }
         else
         {
             await using var f = File.Open(_folder + "/" + key + ".json", FileMode.Open);
-            await JsonUtils.ToJson(value, f);
-            await f.FlushAsync();
+            await JsonUtils.ToJson(value, f, ct);
+            await f.FlushAsync(ct);
         }
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using StarTradersUI.Api;
@@ -11,10 +12,10 @@ namespace StarTradersUI.Utilities;
 public static class HttpClientExtensions
 {
     public static async Task<T[]> GetAllPaginatedData<T>(this HttpClient client, string url, string? cacheKey = null,
-        string? authToken = null)
+        string? authToken = null, CancellationToken cancellationToken = default)
     {
         
-        if (cacheKey != null && await GlobalStates.GlobalDataCache.TryGet<T[]>(cacheKey) is { } cachedResults)
+        if (cacheKey != null && await GlobalStates.GlobalDataCache.TryGet<T[]>(cacheKey, cancellationToken) is { } cachedResults)
         {
             return cachedResults;
         }
@@ -26,7 +27,7 @@ public static class HttpClientExtensions
         do
         {
             var subUrl = $"{url}?page={page}&limit=20";
-            var json = await client.GetJsonAsync<PagedResults<T>>(subUrl, authToken);
+            var json = await client.GetJsonAsync<PagedResults<T>>(subUrl, authToken, ct: cancellationToken);
             total = json!.Meta.Total;
             results ??= new T[total];
             var resultsSpan = results.AsSpan();
@@ -36,19 +37,19 @@ public static class HttpClientExtensions
         } while (nextStartIndex < total);
 
         results ??= [];
-        if (cacheKey != null) await GlobalStates.GlobalDataCache.Set(cacheKey, results);
+        if (cacheKey != null) await GlobalStates.GlobalDataCache.Set(cacheKey, results, cancellationToken);
         return results;
     }
 
     public static async Task RateLimitedRequest(this HttpClient client, Func<HttpRequestMessage> message,
-        Func<HttpResponseMessage, Task> onResponse)
+        Func<HttpResponseMessage, Task> onResponse, CancellationToken ct=default)
     {
         while (true)
         {
-            var response = await client.SendAsync(message());
+            var response = await client.SendAsync(message(), ct);
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(500));
+                await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
                 continue;
             }
 
@@ -65,14 +66,14 @@ public static class HttpClientExtensions
     }
 
     public static async Task<T> RateLimitedRequest<T>(this HttpClient client, Func<HttpRequestMessage> message,
-        Func<HttpResponseMessage, Task<T>> onResponse)
+        Func<HttpResponseMessage, Task<T>> onResponse, CancellationToken ct=default)
     {
         while (true)
         {
-            var response = await client.SendAsync(message());
+            var response = await client.SendAsync(message(), ct);
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(500));
+                await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
                 continue;
             }
 
@@ -88,14 +89,14 @@ public static class HttpClientExtensions
     }
 
     public static async Task RateLimitedRequest(this HttpClient client, Func<HttpRequestMessage> message,
-        Action<HttpResponseMessage> onResponse)
+        Action<HttpResponseMessage> onResponse, CancellationToken ct=default)
     {
         while (true)
         {
-            var response = await client.SendAsync(message());
+            var response = await client.SendAsync(message(), ct);
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(500));
+                await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
                 continue;
             }
 
@@ -113,14 +114,14 @@ public static class HttpClientExtensions
 
 
     public static async Task<T> RateLimitedRequest<T>(this HttpClient client, Func<HttpRequestMessage> message,
-        Func<HttpResponseMessage, T> onResponse)
+        Func<HttpResponseMessage, T> onResponse, CancellationToken ct=default)
     {
         while (true)
         {
-            var response = await client.SendAsync(message());
+            var response = await client.SendAsync(message(), ct);
             if (response.StatusCode == HttpStatusCode.TooManyRequests)
             {
-                await Task.Delay(TimeSpan.FromMilliseconds(500));
+                await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
                 continue;
             }
 
@@ -135,7 +136,7 @@ public static class HttpClientExtensions
         ;
     }
 
-    public static async Task<T?> GetJsonAsync<T>(this HttpClient client, string url, string? authToken = null)
+    public static async Task<T?> GetJsonAsync<T>(this HttpClient client, string url, string? authToken = null, CancellationToken ct=default)
         where T : class
     {
         return await client.RateLimitedRequest(() =>
@@ -145,8 +146,8 @@ public static class HttpClientExtensions
             return request;
         }, async response =>
         {
-            await using var stream = await response.Content.ReadAsStreamAsync();
-            return await JsonUtils.FromJson<T>(stream);
-        });
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            return await JsonUtils.FromJson<T>(stream, ct);
+        }, ct: ct);
     }
 }
