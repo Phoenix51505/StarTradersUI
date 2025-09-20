@@ -1,10 +1,11 @@
 ﻿using Avalonia.Controls;
-using Avalonia.Interactivity;
 using System;
-using System.Diagnostics;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using Avalonia.Interactivity;
+using Avalonia.Threading;
+
 namespace StarTradersUI.Views;
 
 public partial class MainView : UserControl
@@ -12,8 +13,9 @@ public partial class MainView : UserControl
     public MainView()
     {
         InitializeComponent();
-
+        Dispatcher.UIThread.InvokeAsync(GlobalStates.InitializeGlobalState);
     }
+    
     private void SwitchEvent(object? sender, RoutedEventArgs e)
     {
         SignLabel.IsVisible = !SignLabel.IsVisible;
@@ -26,7 +28,7 @@ public partial class MainView : UserControl
         RegisterComboBox.IsVisible = !RegisterComboBox.IsVisible;
         RegisterButton.IsVisible = !RegisterButton.IsVisible;
         RegisterSwitch.IsVisible = !RegisterSwitch.IsVisible;
-        if (SignLabel.IsVisible == true)
+        if (SignLabel.IsVisible)
         {
             Entry.Height = 156;
             EntryBorder.Height = 176;
