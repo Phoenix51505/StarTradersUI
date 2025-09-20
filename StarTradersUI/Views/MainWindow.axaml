@@ -10,6 +10,7 @@
         Icon="/Assets/avalonia-logo.ico"
         Title="StarTradersUI"
         x:Name="RootWindow"
+        MinWidth="{Binding Path =#RootWindow.Height, Converter={x:Static controls:MyConverters.WindowSizeConverter}}"
         Loaded="Window_Loaded">
         <views:MainView/>
         <!-- <controls:SystemDrawer Width="512" Height="512"> -->
