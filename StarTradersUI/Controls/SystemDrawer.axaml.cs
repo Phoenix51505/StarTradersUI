@@ -71,8 +71,6 @@ public partial class SystemDrawer : UserControl
 
     private double UniverseUnitsPerPixel => ViewportScale / Width;
 
-    private int _waypointCacheGeneration = 0;
-
 
     // Since we are going to draw waypoints at 1/10th the scale 
 
@@ -298,7 +296,9 @@ public partial class SystemDrawer : UserControl
 
         if (_waypointParentSystemInfo != null)
         {
-            foreach (var waypoint in _waypointInformations!.Where(x => x.Waypoint.Type is not WaypointType.Asteroid and not WaypointType.AsteroidBase and not WaypointType.EngineeredAsteroid))
+            foreach (var waypoint in _waypointInformations!.Where(x =>
+                         x.Waypoint.Type is not WaypointType.Asteroid and not WaypointType.AsteroidBase
+                             and not WaypointType.EngineeredAsteroid))
             {
                 RenderWaypointOrbitals(context, waypoint);
             }
@@ -883,9 +883,10 @@ public partial class SystemDrawer : UserControl
 
     public void RefreshWaypoints()
     {
-        _waypointCacheGeneration++;
         _waypointInformations = null;
         if (_waypointParentSystemInfo == null) return;
+        GlobalStates.GlobalDataCache.Remove($"{_waypointParentSystemInfo.System.Symbol}/Waypoints");
+        
         var parent = _waypointParentSystemInfo;
         _lastUpdateSystem = null;
         _waypointParentSystemInfo = null;
@@ -900,14 +901,6 @@ public partial class SystemDrawer : UserControl
         }
 
         _source.Cancel();
-
-        if (currentSystemInfo.CachedWaypoints != null &&
-            currentSystemInfo.CachedWaypointsGeneration == _waypointCacheGeneration)
-        {
-            _waypointInformations = currentSystemInfo.CachedWaypoints;
-            _waypointParentSystemInfo = currentSystemInfo;
-            return;
-        }
 
         _lastUpdateSystem = currentSystemInfo;
         var currentSource = _source = new CancellationTokenSource();
@@ -925,6 +918,7 @@ public partial class SystemDrawer : UserControl
                 _waypointInformations =
                     (await GlobalStates.client.GetAllPaginatedData<Waypoint>(
                         $"https://api.spacetraders.io/v2/systems/{currentSystemInfo.System.Symbol}/waypoints",
+                        cacheKey: $"{currentSystemInfo.System.Symbol}/Waypoints",
                         cancellationToken: currentSource.Token))
                     .Select(x => new WaypointInformation(x)).ToArray();
             }
@@ -957,8 +951,8 @@ public partial class SystemDrawer : UserControl
             }
 
             _waypointParentSystemInfo = currentSystemInfo;
-            currentSystemInfo.CachedWaypoints = _waypointInformations;
-            currentSystemInfo.CachedWaypointsGeneration = _waypointCacheGeneration;
+            // currentSystemInfo.CachedWaypoints = _waypointInformations;
+            // currentSystemInfo.CachedWaypointsGeneration = _waypointCacheGeneration;
             _lastInvalidationType = InvalidationTypeRecalculate;
             _lastUpdateSystem = null;
             InvalidateVisual();

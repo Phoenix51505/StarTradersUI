@@ -56,4 +56,12 @@ public class DataCache
             await f.FlushAsync(ct);
         }
     }
+
+    public void Remove(string key)
+    {
+        if (File.Exists(_folder + "/" + key + ".json"))
+        {
+            File.Delete(_folder + "/" + key + ".json");
+        }
+    }
 }

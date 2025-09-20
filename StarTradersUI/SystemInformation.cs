@@ -19,12 +19,6 @@ public class SystemInformation(Api.SystemInfo.System system) : IPositionable
     public double SystemNameWidth;
 
     #endregion
-    
-    #region Cached Waypoint Data
-
-    public WaypointInformation[]? CachedWaypoints;
-    public int CachedWaypointsGeneration; // Used for determining when to clear the cached waypoints
-    #endregion
 
     private static double GetSystemScale(Api.SystemInfo.System system) => system.Type switch
     {
