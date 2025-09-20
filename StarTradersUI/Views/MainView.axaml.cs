@@ -22,7 +22,8 @@ public partial class MainView : UserControl
                 MainProgressBar.Maximum = ᛏᚩᛏᛚ;
             });
             LoadingUI.IsVisible = false;
-            LogInUI.IsVisible = true;
+            LogInUI.IsVisible = false;
+            MainScreen.IsVisible = true;
         });
     }
 

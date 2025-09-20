@@ -12,7 +12,7 @@
          to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
     <vm:MainViewModel />
   </Design.DataContext>
-  <Panel>
+  <Panel x:Name="MainPanel">
     <Panel x:Name="LoadingUI">
     <Image Source="avares://StarTradersUI/Assets/Galaxy.png" Height="300" Width="300" HorizontalAlignment="Center" VerticalAlignment="Center">
       <Image.Styles>
@@ -83,7 +83,12 @@
     </Grid>
     </Border>
     </Grid>
-    <Grid ColumnDefinitions="2*, 4, *" x:Name="MainScreen" IsVisible="False">
+    <Grid x:Name="MainScreen" IsVisible="False">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="{Binding $parent[Window].Height}" MinWidth="{Binding $parent[Window].Height, FallbackValue=450}"/>
+        <ColumnDefinition Width="4"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
       <Rectangle Grid.Column="0" Fill="Turquoise"/>
       <GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns"/>
       <Rectangle Grid.Column="2" Fill="DarkMagenta"/>

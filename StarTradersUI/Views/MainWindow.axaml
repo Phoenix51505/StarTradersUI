@@ -9,6 +9,7 @@
         x:Class="StarTradersUI.Views.MainWindow"
         Icon="/Assets/avalonia-logo.ico"
         Title="StarTradersUI"
+        x:Name="RootWindow"
         Loaded="Window_Loaded">
         <views:MainView/>
         <!-- <controls:SystemDrawer Width="512" Height="512"> -->
