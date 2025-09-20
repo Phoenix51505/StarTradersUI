@@ -3,6 +3,7 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:StarTradersUI.ViewModels"
+             xmlns:controls="clr-namespace:StarTradersUI.Controls"
              mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
              x:Class="StarTradersUI.Views.MainView"
              x:DataType="vm:MainViewModel">
@@ -12,7 +13,7 @@
     <vm:MainViewModel />
   </Design.DataContext>
   <Panel>
-  <Panel x:Name="LoadingUI">
+    <Panel x:Name="LoadingUI">
     <Image Source="avares://StarTradersUI/Assets/Galaxy.png" Height="300" Width="300" HorizontalAlignment="Center" VerticalAlignment="Center">
       <Image.Styles>
         <Style Selector="Image">
@@ -30,8 +31,8 @@
       </Image.Styles>
     </Image>
     <ProgressBar x:Name="MainProgressBar" Height="25" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="5" ShowProgressText="True"/>
-  </Panel>
-  <Grid HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="LogInUI" IsVisible="False">
+    </Panel>
+    <Grid HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="LogInUI" IsVisible="False">
     <Image Source="avares://StarTradersUI/Assets/StarField.png" Stretch="UniformToFill"/>
     <Border x:Name="EntryBorder" Height="176" Width="225" Margin="20" CornerRadius="10" Background="#1c1946">
       <Grid x:Name="Entry" ShowGridLines="False" Margin="10" Height="156" Width="205"
@@ -81,6 +82,11 @@
         </Button>
     </Grid>
     </Border>
-  </Grid>
+    </Grid>
+    <Grid ColumnDefinitions="2*, 4, *" x:Name="MainScreen" IsVisible="False">
+      <Rectangle Grid.Column="0" Fill="Turquoise"/>
+      <GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns"/>
+      <Rectangle Grid.Column="2" Fill="DarkMagenta"/>
+    </Grid>
   </Panel>
 </UserControl>
