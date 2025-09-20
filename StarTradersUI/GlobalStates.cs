@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Avalonia.Threading;
+using StarTradersUI.Api.FactionInfo;
 using StarTradersUI.Api.Information;
 using StarTradersUI.Utilities;
 
@@ -21,6 +22,8 @@ public static class GlobalStates
     public static ServerInformation GlobalServerInformation;
     public static DataCache GlobalDataCache;
     public static bool IsInitialized = false;
+    public static Faction[] Factions;
+
     private static event Action? OnInitializationComplete;
     private static event Action? OnServerReset;
 
@@ -41,9 +44,11 @@ public static class GlobalStates
         });
 
         var systemData = await client.GetAllPaginatedData<Api.SystemInfo.System>(
-            "https://api.spacetraders.io/v2/systems", "systems", progressBarCallback: (currentPage, totalPages) =>
+            "https://api.spacetraders.io/v2/systems", "systems",
+            progressBarCallback: (currentPage, totalPages) =>
             {
-                progressBarCallBack($"Reading page {currentPage}/{totalPages} of system data!", currentPage, totalPages);
+                progressBarCallBack($"Reading item {currentPage}/{totalPages} of system data...", currentPage,
+                    totalPages);
             });
         var minX = systemData.Min(x => x.X);
         var minY = systemData.Min(x => x.Y);
@@ -54,6 +59,13 @@ public static class GlobalStates
         {
             SystemTree.Add(new SystemInformation(system));
         }
+
+        Factions = await client.GetAllPaginatedData<Faction>("https://api.spacetraders.io/v2/factions", "factions",
+            progressBarCallback:
+            (currentPage, totalPages) =>
+            {
+                progressBarCallBack($"Reading item {currentPage}/{totalPages} of factions...", currentPage, totalPages);
+            });
 
         IsInitialized = true;
         OnInitializationComplete?.Invoke();

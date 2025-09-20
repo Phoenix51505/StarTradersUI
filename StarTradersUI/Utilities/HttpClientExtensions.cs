@@ -37,7 +37,7 @@ public static class HttpClientExtensions
             json.Data.CopyTo(resultsSpan[nextStartIndex..]);
             nextStartIndex += 20;
             page += 1;
-            progressBarCallback?.Invoke(page, total / 20 + (total % 20 > 0 ? 1 : 0));
+            progressBarCallback?.Invoke(nextStartIndex, total);
         } while (nextStartIndex < total);
 
         results ??= [];
