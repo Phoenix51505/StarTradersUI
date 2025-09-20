@@ -55,7 +55,7 @@ public static class HttpClientExtensions
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new Exception($"HTTP Request Failed {response}");
+                throw new HttpStatusException(response.StatusCode);
             }
 
             await onResponse(response);
@@ -79,7 +79,7 @@ public static class HttpClientExtensions
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new Exception($"HTTP Request Failed {response}");
+                throw new HttpStatusException(response.StatusCode);
             }
 
             return await onResponse(response);
@@ -102,7 +102,7 @@ public static class HttpClientExtensions
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new Exception($"HTTP Request Failed {response}");
+                throw new HttpStatusException(response.StatusCode);
             }
 
             onResponse(response);
@@ -127,13 +127,11 @@ public static class HttpClientExtensions
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new Exception($"HTTP Request Failed {response}");
+                throw new HttpStatusException(response.StatusCode);
             }
 
             return onResponse(response);
         }
-
-        ;
     }
 
     public static async Task<T?> GetJsonAsync<T>(this HttpClient client, string url, string? authToken = null, CancellationToken ct=default)
