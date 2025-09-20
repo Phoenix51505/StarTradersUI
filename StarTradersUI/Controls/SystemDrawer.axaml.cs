@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
@@ -19,6 +20,30 @@ namespace StarTradersUI.Controls;
 
 public partial class SystemDrawer : UserControl
 {
+    #region Events And Properties
+
+    public static readonly RoutedEvent<ValueChangedEventArgs<SystemInformation>> SystemSelectedEvent =
+        RoutedEvent.Register<SystemDrawer, ValueChangedEventArgs<SystemInformation>>(nameof(SystemSelected),
+            RoutingStrategies.Direct);
+
+    public event EventHandler<ValueChangedEventArgs<SystemInformation>> SystemSelected
+    {
+        add => AddHandler(SystemSelectedEvent, value);
+        remove => RemoveHandler(SystemSelectedEvent, value);
+    }
+
+    public static readonly RoutedEvent<ValueChangedEventArgs<WaypointInformation>> WaypointSelectedEvent =
+        RoutedEvent.Register<SystemDrawer, ValueChangedEventArgs<WaypointInformation>>(nameof(WaypointSelected),
+            RoutingStrategies.Direct);
+
+    public event EventHandler<ValueChangedEventArgs<WaypointInformation>> WaypointSelected
+    {
+        add => AddHandler(WaypointSelectedEvent, value);
+        remove => RemoveHandler(WaypointSelectedEvent, value);
+    }
+
+    #endregion
+
     private static Cursor _defaultCursor = Cursor.Default;
     private static Cursor _handCursor = new Cursor(StandardCursorType.Hand);
 
@@ -69,6 +94,7 @@ public partial class SystemDrawer : UserControl
     }
 
     private Point _lastPosition = new(0, 0);
+    private DateTime _dragStart;
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
     {
@@ -76,7 +102,7 @@ public partial class SystemDrawer : UserControl
         Cursor = _handCursor;
         IsDragging = true;
         _lastPosition = e.GetPosition(this);
-        // Todo here we we have to check if a waypoint or system was hit eventually, but not yet
+        _dragStart = DateTime.Now;
     }
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
@@ -84,6 +110,29 @@ public partial class SystemDrawer : UserControl
         base.OnPointerReleased(e);
         Cursor = null;
         IsDragging = false;
+        var currentPosition = e.GetPosition(this);
+        var dragEnd = DateTime.Now;
+        var span = dragEnd - _dragStart;
+        if (span >= TimeSpan.FromMilliseconds(250)) return;
+
+        if (IsOverSystem(currentPosition.X, currentPosition.Y) is { } system)
+        {
+            Console.WriteLine($"Selected system: {system.System.Name}");
+            var args = new ValueChangedEventArgs<SystemInformation>(system)
+            {
+                RoutedEvent = SystemSelectedEvent
+            };
+            RaiseEvent(args);
+        }
+        else if (IsOverWaypoint(currentPosition.X, currentPosition.Y) is { } waypoint)
+        {
+            Console.WriteLine($"Selected waypoint: {waypoint.Waypoint.Symbol}");
+            var args = new ValueChangedEventArgs<WaypointInformation>(waypoint)
+            {
+                RoutedEvent = WaypointSelectedEvent
+            };
+            RaiseEvent(args);
+        }
     }
 
     protected override void OnPointerMoved(PointerEventArgs e)
@@ -114,7 +163,8 @@ public partial class SystemDrawer : UserControl
                         DispatchWaypointUpdate(closestSystem);
                     }
                 }
-            } else if (_initialized && UniverseUnitsPerPixel <= SystemViewLoadUpp)
+            }
+            else if (_initialized && UniverseUnitsPerPixel <= SystemViewLoadUpp)
             {
                 var closestSystem = GlobalStates.SystemTree.ClosestTo(ViewportCenterX, ViewportCenterY)!;
                 DispatchWaypointUpdate(closestSystem);
@@ -173,11 +223,9 @@ public partial class SystemDrawer : UserControl
 
         if (_waypointParentSystemInfo != null)
         {
-            
             var closestSystem = GlobalStates.SystemTree.ClosestTo(ViewportCenterX, ViewportCenterY)!;
             if (!ReferenceEquals(closestSystem, _waypointParentSystemInfo))
             {
-                
                 var distanceToOther = closestSystem.DistanceTo(ViewportCenterX, ViewportCenterY);
                 var distanceToCurrent = _waypointParentSystemInfo.DistanceTo(ViewportCenterX, ViewportCenterY);
                 if (distanceToCurrent > distanceToOther * 0.33)
@@ -186,6 +234,7 @@ public partial class SystemDrawer : UserControl
                 }
             }
         }
+
         if (newUnitsPerPixel < SystemViewLoadUpp && _initialized && _waypointParentSystemInfo == null)
         {
             var closestSystem = GlobalStates.SystemTree.ClosestTo(ViewportCenterX, ViewportCenterY)!;
@@ -249,7 +298,7 @@ public partial class SystemDrawer : UserControl
 
         if (_waypointParentSystemInfo != null)
         {
-            foreach (var waypoint in _waypointInformations!)
+            foreach (var waypoint in _waypointInformations!.Where(x => x.Waypoint.Type is not WaypointType.Asteroid and not WaypointType.AsteroidBase and not WaypointType.EngineeredAsteroid))
             {
                 RenderWaypointOrbitals(context, waypoint);
             }
@@ -541,7 +590,8 @@ public partial class SystemDrawer : UserControl
                 DrawWaypoint(context, AsteroidBrush, centerPoint, baseSizeInPixels, waypoint, DrawAsteroid);
                 break;
             case WaypointType.EngineeredAsteroid:
-                DrawWaypoint(context, EngineeredAsteroidBrush, centerPoint, baseSizeInPixels, waypoint, DrawEngineeredAsteroid);
+                DrawWaypoint(context, EngineeredAsteroidBrush, centerPoint, baseSizeInPixels, waypoint,
+                    DrawEngineeredAsteroid);
                 break;
             case WaypointType.AsteroidBase:
                 DrawWaypoint(context, AsteroidBaseBrush, centerPoint, baseSizeInPixels, waypoint, DrawAsteroidBase);
@@ -678,14 +728,16 @@ public partial class SystemDrawer : UserControl
             new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y + scaledSize / 4));
     }
 
-    private void DrawFuelStation(DrawingContext context, Point location, double scaledSize, WaypointInformation waypoint)
+    private void DrawFuelStation(DrawingContext context, Point location, double scaledSize,
+        WaypointInformation waypoint)
     {
         var coreBrush = Brushes.LightSlateGray;
         var coreWidth = Math.Max(1, scaledSize / 15);
         var corePen = new Pen(coreBrush, coreWidth, lineCap: PenLineCap.Round);
         var tankBrush = FuelStationBrush;
         context.DrawRectangle(tankBrush, null,
-            new Rect(location.X - scaledSize / 3, location.Y - scaledSize / 2, 2 * scaledSize / 3, scaledSize), radiusX: scaledSize/20, radiusY:scaledSize/20);
+            new Rect(location.X - scaledSize / 3, location.Y - scaledSize / 2, 2 * scaledSize / 3, scaledSize),
+            radiusX: scaledSize / 20, radiusY: scaledSize / 20);
         context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y - scaledSize / 4),
             new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y - scaledSize / 4));
         context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y),
@@ -747,8 +799,9 @@ public partial class SystemDrawer : UserControl
 
         context.DrawGeometry(AsteroidBrush, null, streamGeometry);
     }
-    
-    private void DrawEngineeredAsteroid(DrawingContext context, Point location, double scaledSize, WaypointInformation waypoint)
+
+    private void DrawEngineeredAsteroid(DrawingContext context, Point location, double scaledSize,
+        WaypointInformation waypoint)
     {
         var streamGeometry = new StreamGeometry();
         using (var ctx = streamGeometry.Open())
@@ -772,12 +825,13 @@ public partial class SystemDrawer : UserControl
     }
 
     private static readonly Brush AsteroidBaseAtmosphere = new SolidColorBrush();
+
     private void DrawAsteroidBase(DrawingContext context, Point location, double scaledSize,
         WaypointInformation waypoint)
     {
         var baseAtmosphere = new SolidColorBrush(new Color(127, 173, 216, 230));
         DrawEngineeredAsteroid(context, location, scaledSize, waypoint);
-        context.DrawEllipse(baseAtmosphere,null,location,scaledSize/2,scaledSize/2);
+        context.DrawEllipse(baseAtmosphere, null, location, scaledSize / 2, scaledSize / 2);
     }
 
     #endregion
@@ -844,6 +898,7 @@ public partial class SystemDrawer : UserControl
         {
             return;
         }
+
         _source.Cancel();
 
         if (currentSystemInfo.CachedWaypoints != null &&
