@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
 using Avalonia.Threading;
@@ -16,17 +17,18 @@ public static class GlobalStates
     public static string? authorization = null;
 
     public static QuadTree<SystemInformation> SystemTree;
-    
+
     public static ServerInformation GlobalServerInformation;
     public static DataCache GlobalDataCache;
-    public static bool IsInialized = false;
+    public static bool IsInitialized = false;
     private static event Action? OnInitializationComplete;
     private static event Action? OnServerReset;
 
-    public static async Task InitializeGlobalState()
+    public static async Task InitializeGlobalState(Action<string, int, int> progressBarCallBack)
     {
+        progressBarCallBack("Reading global server information...", 0, 1);
         GlobalServerInformation = (await client.GetJsonAsync<ServerInformation>("https://api.spacetraders.io/v2/"))!;
-        GlobalDataCache = new DataCache("./Cache", GlobalServerInformation.ResetDate); 
+        GlobalDataCache = new DataCache("./Cache", GlobalServerInformation.ResetDate);
         // We just want to add this to the server code
         _ = Dispatcher.UIThread.InvokeAsync(async () =>
         {
@@ -34,10 +36,15 @@ public static class GlobalStates
             {
                 await Task.Delay(1000);
             }
+
             OnServerReset?.Invoke();
         });
-        
-        var systemData = await client.GetAllPaginatedData<Api.SystemInfo.System>("https://api.spacetraders.io/v2/systems","systems");
+
+        var systemData = await client.GetAllPaginatedData<Api.SystemInfo.System>(
+            "https://api.spacetraders.io/v2/systems", "systems", progressBarCallback: (currentPage, totalPages) =>
+            {
+                progressBarCallBack($"Reading page {currentPage}/{totalPages} of system data!", currentPage, totalPages);
+            });
         var minX = systemData.Min(x => x.X);
         var minY = systemData.Min(x => x.Y);
         var maxX = systemData.Max(x => x.X);
@@ -48,13 +55,13 @@ public static class GlobalStates
             SystemTree.Add(new SystemInformation(system));
         }
 
-        IsInialized = true;
+        IsInitialized = true;
         OnInitializationComplete?.Invoke();
     }
 
     public static void DoWhenInitialized(Action todo)
     {
-        if (IsInialized)
+        if (IsInitialized)
         {
             todo();
         }

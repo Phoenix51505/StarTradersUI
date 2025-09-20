@@ -13,9 +13,9 @@ public partial class MainView : UserControl
     public MainView()
     {
         InitializeComponent();
-        Dispatcher.UIThread.InvokeAsync(GlobalStates.InitializeGlobalState);
+        Dispatcher.UIThread.InvokeAsync(async () => await GlobalStates.InitializeGlobalState((_, _, _) => { }));
     }
-    
+
     private void SwitchEvent(object? sender, RoutedEventArgs e)
     {
         SignLabel.IsVisible = !SignLabel.IsVisible;

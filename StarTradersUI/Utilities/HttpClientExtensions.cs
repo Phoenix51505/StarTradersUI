@@ -12,11 +12,13 @@ namespace StarTradersUI.Utilities;
 public static class HttpClientExtensions
 {
     public static async Task<T[]> GetAllPaginatedData<T>(this HttpClient client, string url, string? cacheKey = null,
-        string? authToken = null, CancellationToken cancellationToken = default)
+        string? authToken = null, Action<int, int>? progressBarCallback = null,
+        CancellationToken cancellationToken = default)
     {
-        
-        if (cacheKey != null && await GlobalStates.GlobalDataCache.TryGet<T[]>(cacheKey, cancellationToken) is { } cachedResults)
+        if (cacheKey != null && await GlobalStates.GlobalDataCache.TryGet<T[]>(cacheKey, cancellationToken) is
+                { } cachedResults)
         {
+            progressBarCallback?.Invoke(1, 1);
             return cachedResults;
         }
 
@@ -24,6 +26,7 @@ public static class HttpClientExtensions
         var nextStartIndex = 0;
         int total;
         var page = 1;
+        progressBarCallback?.Invoke(0, 1);
         do
         {
             var subUrl = $"{url}?page={page}&limit=20";
@@ -34,6 +37,7 @@ public static class HttpClientExtensions
             json.Data.CopyTo(resultsSpan[nextStartIndex..]);
             nextStartIndex += 20;
             page += 1;
+            progressBarCallback?.Invoke(page, total / 20 + (total % 20 > 0 ? 1 : 0));
         } while (nextStartIndex < total);
 
         results ??= [];
@@ -42,7 +46,7 @@ public static class HttpClientExtensions
     }
 
     public static async Task RateLimitedRequest(this HttpClient client, Func<HttpRequestMessage> message,
-        Func<HttpResponseMessage, Task> onResponse, CancellationToken ct=default)
+        Func<HttpResponseMessage, Task> onResponse, CancellationToken ct = default)
     {
         while (true)
         {
@@ -66,7 +70,7 @@ public static class HttpClientExtensions
     }
 
     public static async Task<T> RateLimitedRequest<T>(this HttpClient client, Func<HttpRequestMessage> message,
-        Func<HttpResponseMessage, Task<T>> onResponse, CancellationToken ct=default)
+        Func<HttpResponseMessage, Task<T>> onResponse, CancellationToken ct = default)
     {
         while (true)
         {
@@ -89,7 +93,7 @@ public static class HttpClientExtensions
     }
 
     public static async Task RateLimitedRequest(this HttpClient client, Func<HttpRequestMessage> message,
-        Action<HttpResponseMessage> onResponse, CancellationToken ct=default)
+        Action<HttpResponseMessage> onResponse, CancellationToken ct = default)
     {
         while (true)
         {
@@ -114,7 +118,7 @@ public static class HttpClientExtensions
 
 
     public static async Task<T> RateLimitedRequest<T>(this HttpClient client, Func<HttpRequestMessage> message,
-        Func<HttpResponseMessage, T> onResponse, CancellationToken ct=default)
+        Func<HttpResponseMessage, T> onResponse, CancellationToken ct = default)
     {
         while (true)
         {
@@ -134,7 +138,8 @@ public static class HttpClientExtensions
         }
     }
 
-    public static async Task<T?> GetJsonAsync<T>(this HttpClient client, string url, string? authToken = null, CancellationToken ct=default)
+    public static async Task<T?> GetJsonAsync<T>(this HttpClient client, string url, string? authToken = null,
+        CancellationToken ct = default)
         where T : class
     {
         return await client.RateLimitedRequest(() =>
