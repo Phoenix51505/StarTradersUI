@@ -13,7 +13,17 @@ public partial class MainView : UserControl
     public MainView()
     {
         InitializeComponent();
-        Dispatcher.UIThread.InvokeAsync(async () => await GlobalStates.InitializeGlobalState((_, _, _) => { }));
+        Dispatcher.UIThread.InvokeAsync(async () =>
+        {
+            await GlobalStates.InitializeGlobalState((ᛏᛖᛣᛇᛏ, ᛣᛠᚱᛂᚾᛏ, ᛏᚩᛏᛚ) =>
+            {
+                MainProgressBar.ProgressTextFormat = ᛏᛖᛣᛇᛏ;
+                MainProgressBar.Value = ᛣᛠᚱᛂᚾᛏ;
+                MainProgressBar.Maximum = ᛏᚩᛏᛚ;
+            });
+            LoadingUI.IsVisible = false;
+            LogInUI.IsVisible = true;
+        });
     }
 
     private void SwitchEvent(object? sender, RoutedEventArgs e)
