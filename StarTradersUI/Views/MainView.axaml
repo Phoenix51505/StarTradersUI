@@ -11,7 +11,27 @@
          to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
     <vm:MainViewModel />
   </Design.DataContext>
-  <Grid HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="LogInUI">
+  <Panel>
+  <Panel x:Name="LoadingUI">
+    <Image Source="avares://StarTradersUI/Assets/Galaxy.png" Height="300" Width="300" HorizontalAlignment="Center" VerticalAlignment="Center">
+      <Image.Styles>
+        <Style Selector="Image">
+          <Style.Animations>
+            <Animation Duration="0:0:1" IterationCount="INFINITE">
+              <KeyFrame Cue="0%">
+                <Setter Property="RotateTransform.Angle" Value="0.0"/>
+              </KeyFrame>
+              <KeyFrame Cue="100%">
+                <Setter Property="RotateTransform.Angle" Value="180.0"/>
+              </KeyFrame>
+            </Animation>
+          </Style.Animations>
+        </Style>
+      </Image.Styles>
+    </Image>
+    <ProgressBar x:Name="MainProgressBar" Height="25" VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="5" ShowProgressText="True"/>
+  </Panel>
+  <Grid HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="LogInUI" IsVisible="False">
     <Image Source="avares://StarTradersUI/Assets/StarField.png" Stretch="UniformToFill"/>
     <Border x:Name="EntryBorder" Height="176" Width="225" Margin="20" CornerRadius="10" Background="#1c1946">
       <Grid x:Name="Entry" ShowGridLines="False" Margin="10" Height="156" Width="205"
@@ -62,5 +82,5 @@
     </Grid>
     </Border>
   </Grid>
-  
+  </Panel>
 </UserControl>
