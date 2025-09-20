@@ -98,10 +98,18 @@ public partial class SystemDrawer : UserControl
     {
         base.OnPointerPressed(e);
         Cursor = _handCursor;
-        IsDragging = true;
+        var point = e.GetCurrentPoint(this);
         _lastPosition = e.GetPosition(this);
+        if (!point.Properties.IsLeftButtonPressed &&
+            (GetSystemAt(_lastPosition.X, _lastPosition.Y) is not null ||
+             GetWaypointAt(_lastPosition.X, _lastPosition.Y) is not null)) return;
+        IsDragging = true;
         _dragStart = DateTime.Now;
     }
+
+    public WaypointInformation? LastSelectedWaypoint = null;
+    public SystemInformation? LastSelectedSystem = null;
+
 
     protected override void OnPointerReleased(PointerReleasedEventArgs e)
     {
@@ -111,25 +119,46 @@ public partial class SystemDrawer : UserControl
         var currentPosition = e.GetPosition(this);
         var dragEnd = DateTime.Now;
         var span = dragEnd - _dragStart;
-        if (span >= TimeSpan.FromMilliseconds(250)) return;
 
-        if (IsOverSystem(currentPosition.X, currentPosition.Y) is { } system)
+        if (e.InitialPressMouseButton == MouseButton.Right)
         {
-            Console.WriteLine($"Selected system: {system.System.Name}");
-            var args = new ValueChangedEventArgs<SystemInformation>(system)
+            if (GetSystemAt(currentPosition.X, currentPosition.Y) is { } system &&
+                Resources["System Context Menu"] is ContextMenu menu)
             {
-                RoutedEvent = SystemSelectedEvent
-            };
-            RaiseEvent(args);
+                LastSelectedSystem = system;
+                menu.Open(this);
+                e.Handled = true;
+            }
+            else if (GetWaypointAt(currentPosition.X, currentPosition.Y) is { } waypoint &&
+                     Resources["Waypoint Context Menu"] is ContextMenu menu2)
+            {
+                LastSelectedWaypoint = waypoint;
+                menu2.Open(this);
+                e.Handled = true;
+            }
         }
-        else if (IsOverWaypoint(currentPosition.X, currentPosition.Y) is { } waypoint)
+        else
         {
-            Console.WriteLine($"Selected waypoint: {waypoint.Waypoint.Symbol}");
-            var args = new ValueChangedEventArgs<WaypointInformation>(waypoint)
+            if (span >= TimeSpan.FromMilliseconds(250)) return;
+
+            if (GetSystemAt(currentPosition.X, currentPosition.Y) is { } system)
             {
-                RoutedEvent = WaypointSelectedEvent
-            };
-            RaiseEvent(args);
+                Console.WriteLine($"Selected system: {system.System.Name}");
+                var args = new ValueChangedEventArgs<SystemInformation>(system)
+                {
+                    RoutedEvent = SystemSelectedEvent
+                };
+                RaiseEvent(args);
+            }
+            else if (GetWaypointAt(currentPosition.X, currentPosition.Y) is { } waypoint)
+            {
+                Console.WriteLine($"Selected waypoint: {waypoint.Waypoint.Symbol}");
+                var args = new ValueChangedEventArgs<WaypointInformation>(waypoint)
+                {
+                    RoutedEvent = WaypointSelectedEvent
+                };
+                RaiseEvent(args);
+            }
         }
     }
 
@@ -172,8 +201,8 @@ public partial class SystemDrawer : UserControl
         }
         else
         {
-            if (IsOverSystem(currentPosition.X, currentPosition.Y) != null ||
-                IsOverWaypoint(currentPosition.X, currentPosition.Y) != null)
+            if (GetSystemAt(currentPosition.X, currentPosition.Y) != null ||
+                GetWaypointAt(currentPosition.X, currentPosition.Y) != null)
             {
                 Cursor = _handCursor;
             }
@@ -846,7 +875,7 @@ public partial class SystemDrawer : UserControl
     public double ToViewportX(double universeX) => ((universeX - ViewportCenterX) / UniverseUnitsPerPixel) + CenterX;
     public double ToViewportY(double universeY) => ((universeY - ViewportCenterY) / UniverseUnitsPerPixel) + CenterY;
 
-    public SystemInformation? IsOverSystem(double mouseX, double mouseY)
+    public SystemInformation? GetSystemAt(double mouseX, double mouseY)
     {
         var universeX = ToUniverseX(mouseX);
         var universeY = ToUniverseY(mouseY);
@@ -855,7 +884,7 @@ public partial class SystemDrawer : UserControl
             (s.Scale / 4) * (s.Scale / 4));
     }
 
-    public WaypointInformation? IsOverWaypoint(double mouseX, double mouseY)
+    public WaypointInformation? GetWaypointAt(double mouseX, double mouseY)
     {
         var universeX = ToUniverseX(mouseX);
         var universeY = ToUniverseY(mouseY);
@@ -886,7 +915,7 @@ public partial class SystemDrawer : UserControl
         _waypointInformations = null;
         if (_waypointParentSystemInfo == null) return;
         GlobalStates.GlobalDataCache.Remove($"{_waypointParentSystemInfo.System.Symbol}/Waypoints");
-        
+
         var parent = _waypointParentSystemInfo;
         _lastUpdateSystem = null;
         _waypointParentSystemInfo = null;
@@ -918,8 +947,9 @@ public partial class SystemDrawer : UserControl
                 _waypointInformations =
                     (await GlobalStates.client.GetAllPaginatedData<Waypoint>(
                         $"https://api.spacetraders.io/v2/systems/{currentSystemInfo.System.Symbol}/waypoints",
-                        cacheKey: $"{currentSystemInfo.System.Symbol}/Waypoints",
-                        cancellationToken: currentSource.Token))
+                        cacheKey: $"{currentSystemInfo.System.Symbol}/Waypoints", authToken: GlobalStates.authorization,
+                        cancellationToken:
+                        currentSource.Token))
                     .Select(x => new WaypointInformation(x)).ToArray();
             }
             catch (OperationCanceledException)
