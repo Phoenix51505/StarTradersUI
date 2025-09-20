@@ -11,8 +11,8 @@
          to set the actual DataContext for runtime, set the DataContext property in code (look at App.axaml.cs) -->
     <vm:MainViewModel />
   </Design.DataContext>
-  <Grid HorizontalAlignment="Center" VerticalAlignment="Center">
-  <Image Source="avares://StarTradersUI/Assets/StarField.png" Stretch="UniformToFill"/>
+  <Grid HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="LogInUI">
+    <Image Source="avares://StarTradersUI/Assets/StarField.png" Stretch="UniformToFill"/>
     <Border x:Name="EntryBorder" Height="176" Width="225" Margin="20" CornerRadius="10" Background="#1c1946">
       <Grid x:Name="Entry" ShowGridLines="False" Margin="10" Height="156" Width="205"
         ColumnDefinitions="Auto"
@@ -62,4 +62,5 @@
     </Grid>
     </Border>
   </Grid>
+  
 </UserControl>
