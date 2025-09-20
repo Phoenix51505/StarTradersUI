@@ -12,11 +12,12 @@ namespace StarTradersUI.Utilities;
 public static class HttpClientExtensions
 {
     public static async Task<T[]> GetAllPaginatedData<T>(this HttpClient client, string url, string? cacheKey = null,
-        string? authToken = null, CancellationToken cancellationToken = default)
+        string? authToken = null, CancellationToken cancellationToken = default, Action<int,int>? progressBarCallback = null)
     {
         
         if (cacheKey != null && await GlobalStates.GlobalDataCache.TryGet<T[]>(cacheKey, cancellationToken) is { } cachedResults)
         {
+            progressBarCallback?.Invoke(1, 1);
             return cachedResults;
         }
 
@@ -24,6 +25,7 @@ public static class HttpClientExtensions
         var nextStartIndex = 0;
         int total;
         var page = 1;
+        progressBarCallback?.Invoke(0, 1);
         do
         {
             var subUrl = $"{url}?page={page}&limit=20";
@@ -34,6 +36,7 @@ public static class HttpClientExtensions
             json.Data.CopyTo(resultsSpan[nextStartIndex..]);
             nextStartIndex += 20;
             page += 1;
+            progressBarCallback?.Invoke(page, total/20 + (total % 20 > 0 ? 1 : 0));
         } while (nextStartIndex < total);
 
         results ??= [];
