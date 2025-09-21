@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Text;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace StarTradersUI.Api;
@@ -21,4 +22,9 @@ public static class JsonUtils
         await JsonSerializer.DeserializeAsync<T>(jsonStream, Options, ct);
     
     public static async Task ToJson<T>(T value, Stream jsonStream, CancellationToken ct=default) => await JsonSerializer.SerializeAsync(jsonStream, value, Options, ct);
+
+    public static string ToJson<T>(T value)
+    {
+        return JsonSerializer.Serialize(value, Options);
+    }
 }

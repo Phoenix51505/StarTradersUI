@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
+using Avalonia.Controls;
 using Avalonia.Threading;
 using StarTradersUI.Api.FactionInfo;
 using StarTradersUI.Api.Information;
@@ -26,6 +29,24 @@ public static class GlobalStates
 
     private static event Action? OnInitializationComplete;
     private static event Action? OnServerReset;
+
+    public static Dictionary<string, string> CachedTokens = [];
+
+    public static string? CachedAccountToken
+    {
+        get => File.Exists("account_token.txt") ? File.ReadAllText("account_token.txt") : null;
+        set
+        {
+            if (value == null)
+            {
+                if (File.Exists("account_token.txt")) File.Delete("account_token.txt");
+            }
+            else
+            {
+                File.WriteAllText("account_token.txt", value);
+            }
+        }
+    }
 
     public static async Task InitializeGlobalState(Action<string, int, int> progressBarCallBack)
     {
@@ -67,6 +88,8 @@ public static class GlobalStates
                 progressBarCallBack($"Reading item {currentPage}/{totalPages} of factions...", currentPage, totalPages);
             });
 
+        CachedTokens = await GlobalDataCache.TryGet<Dictionary<string, string>>("auth_tokens") ?? [];
+
         IsInitialized = true;
         OnInitializationComplete?.Invoke();
     }
@@ -93,5 +116,15 @@ public static class GlobalStates
         {
             OnServerReset += todo;
         }
+    }
+
+    public static async Task AddAgent(string bearerToken, string shipName)
+    {
+        if (CachedTokens.TryGetValue(shipName, out var token))
+        {
+            if (token == bearerToken) return;
+        }
+        CachedTokens[shipName] = bearerToken;
+        await GlobalDataCache.Set("auth_tokens", CachedTokens);
     }
 }

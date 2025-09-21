@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Net;
+using System.Net.Http;
 
 namespace StarTradersUI.Utilities;
 
-public class HttpStatusException(HttpStatusCode code) : Exception($"HTTP request failed with status code {code}")
+public class HttpStatusException(HttpResponseMessage response) : Exception($"HTTP request failed with status code {response.StatusCode}")
 {
-    public HttpStatusCode Code => code;
+    public HttpResponseMessage Response = response;
+    public HttpStatusCode Code => Response.StatusCode;
 }

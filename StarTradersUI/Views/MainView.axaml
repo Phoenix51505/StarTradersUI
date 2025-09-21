@@ -34,14 +34,18 @@
     </Panel>
     <Grid HorizontalAlignment="Center" VerticalAlignment="Center" x:Name="LogInUI" IsVisible="False">
     <Image Source="avares://StarTradersUI/Assets/StarField.png" Stretch="UniformToFill"/>
-    <Border x:Name="EntryBorder" Height="176" Width="225" Margin="20" CornerRadius="10" Background="#1c1946">
-      <Grid x:Name="Entry" ShowGridLines="False" Margin="10" Height="156" Width="205"
+    <Border x:Name="EntryBorder" Height="201" Width="225" Margin="20" CornerRadius="10" Background="#1c1946">
+      <Grid x:Name="Entry" ShowGridLines="False" Margin="10" Height="181" Width="205"
         ColumnDefinitions="Auto"
         RowDefinitions="Auto, Auto, Auto, Auto, Auto, Auto">
         <Label x:Name="SignLabel" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="True" Margin="0,0,0,25">Sign in with an existing Agent</Label>
-        <TextBox x:Name="SignBox" Grid.Row="1" Grid.Column="0" Watermark="Agent Token" Height="20" IsVisible="True" Width="203" Margin="0,2,0,2"></TextBox>
-        <Button x:Name="SignButton" Grid.Row="2" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Top" Width="205" Margin="0,2,0,2" HorizontalContentAlignment="Center" IsVisible="True">Sign In</Button>
-        <Button x:Name="SignSwitch" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Bottom" HorizontalContentAlignment="Left" IsVisible="True" Background="Transparent" Foreground="#5865F2" FontSize="12" Margin="0,10,0,0" Click="SwitchEvent">
+        <Grid x:Name="SignBoxWithPassword" Grid.Row="1" Grid.Column="0" ColumnDefinitions="165, Auto">
+          <TextBox x:Name="SignBox" Grid.Column="0" Watermark="Agent Token" Height="20" IsVisible="True" Margin="0,2,0,2" PasswordChar="*" RevealPassword="False" MaxWidth="165"/>
+          <Button x:Name="RevealAgentToken" Grid.Column="1" Click="RevealAgentToken_OnClick">👁</Button>
+        </Grid>
+        <ComboBox x:Name="StoredToken" Grid.Row="2" Width="203" SelectedIndex="0" SelectionChanged="StoredToken_OnSelectionChanged" PlaceholderText="Select Stored Token"/>
+        <Button x:Name="SignButton" Grid.Row="3" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Top" Width="205" Margin="0,2,0,2" HorizontalContentAlignment="Center" IsVisible="True" Click="SignButton_OnClick">Sign In</Button>
+        <Button x:Name="SignSwitch" Grid.Row="4" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Bottom" HorizontalContentAlignment="Left" IsVisible="True" Background="Transparent" Foreground="#5865F2" FontSize="12" Margin="0,10,0,0" Click="SwitchEvent">
           <Button.Styles>
             <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
               <Setter Property="Background" Value="Transparent"/>
@@ -55,17 +59,15 @@
             <TextBlock Text="Need a new Agent? Register"/> 
           </Button.Content>
         </Button>
+        
         <Label x:Name="RegisterLabel" Grid.Row="0" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Center" IsVisible="False" Margin="0,0,0,25">Register a new Agent</Label>
-        <TextBox x:Name="RegisterAccountBox" Grid.Row="1" Grid.Column="0" Watermark="Account Token" Height="20" Width="203" Margin="0,2,0,2" VerticalAlignment="Bottom" IsVisible="False"></TextBox>
+        <Grid x:Name="RegisterBoxWithPassword" Grid.Row="1" ColumnDefinitions="165, Auto" IsVisible="False">
+          <TextBox x:Name="RegisterAccountBox" Grid.Column="0" Watermark="Account Token" Height="20" Margin="0,2,0,2" VerticalAlignment="Bottom" IsVisible="True" PasswordChar="*" RevealPassword="False" MaxWidth="165"/>
+          <Button x:Name="RevealAccountToken" Grid.Column="1" Click="RevealAccountToken_OnClick" IsVisible="True">👁</Button>
+        </Grid>
         <TextBox x:Name="RegisterSymbolBox" Grid.Row="2" Grid.Column="0" Watermark="New Agent Symbol" Height="20" Width="203" Margin="0,2,0,2" IsVisible="False"></TextBox>  
-        <ComboBox PlaceholderText="Agent Faction" Grid.Row="3" Grid.Column="0" x:Name="RegisterComboBox" Width="203" Margin="1,2,0,2" Height="20" IsVisible="False">
-          <ComboBox.ItemTemplate>
-            <DataTemplate>
-              <TextBlock Text="{Binding Name}"/>
-            </DataTemplate>
-          </ComboBox.ItemTemplate>
-        </ComboBox>
-        <Button x:Name="RegisterButton" Grid.Row="4" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Top" Width="205" Margin="0,2,0,2" HorizontalContentAlignment="Center" IsVisible="False">Register</Button>
+        <ComboBox PlaceholderText="Agent Faction" Grid.Row="3" Grid.Column="0" x:Name="RegisterComboBox" Width="203" Margin="1,2,0,2" Height="20" IsVisible="False"/>
+        <Button x:Name="RegisterButton" Grid.Row="4" Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Top" Width="205" Margin="0,2,0,2" HorizontalContentAlignment="Center" IsVisible="False" Click="RegisterButton_OnClick">Register</Button>
         <Button x:Name="RegisterSwitch" Grid.Row="5" Grid.Column="0" HorizontalAlignment="Left" VerticalAlignment="Bottom" HorizontalContentAlignment="Left" IsVisible="False" Background="Transparent" Foreground="#5865F2" FontSize="12" Margin="0,10,0,0" Click="SwitchEvent">
           <Button.Styles>
             <Style Selector="Button:pointerover /template/ ContentPresenter#PART_ContentPresenter">

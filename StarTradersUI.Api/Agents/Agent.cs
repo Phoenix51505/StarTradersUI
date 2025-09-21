@@ -1,4 +1,4 @@
-﻿namespace StarTradersUI.Api.Information;
+﻿namespace StarTradersUI.Api.Agents;
 
 public class Agent
 {

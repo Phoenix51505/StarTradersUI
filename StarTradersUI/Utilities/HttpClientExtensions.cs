@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Timers;
@@ -59,15 +60,14 @@ public static class HttpClientExtensions
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new HttpStatusException(response.StatusCode);
+                throw new HttpStatusException(response);
             }
 
             await onResponse(response);
             return;
         }
-
-        ;
     }
+
 
     public static async Task<T> RateLimitedRequest<T>(this HttpClient client, Func<HttpRequestMessage> message,
         Func<HttpResponseMessage, Task<T>> onResponse, CancellationToken ct = default)
@@ -83,17 +83,15 @@ public static class HttpClientExtensions
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new HttpStatusException(response.StatusCode);
+                throw new HttpStatusException(response);
             }
 
             return await onResponse(response);
         }
-
-        ;
     }
 
     public static async Task RateLimitedRequest(this HttpClient client, Func<HttpRequestMessage> message,
-        Action<HttpResponseMessage> onResponse, CancellationToken ct = default)
+        Action<HttpResponseMessage>? onResponse = null, CancellationToken ct = default)
     {
         while (true)
         {
@@ -106,14 +104,12 @@ public static class HttpClientExtensions
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new HttpStatusException(response.StatusCode);
+                throw new HttpStatusException(response);
             }
 
-            onResponse(response);
+            onResponse?.Invoke(response);
             return;
         }
-
-        ;
     }
 
 
@@ -131,7 +127,7 @@ public static class HttpClientExtensions
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new HttpStatusException(response.StatusCode);
+                throw new HttpStatusException(response);
             }
 
             return onResponse(response);
@@ -140,7 +136,6 @@ public static class HttpClientExtensions
 
     public static async Task<T?> GetJsonAsync<T>(this HttpClient client, string url, string? authToken = null,
         CancellationToken ct = default)
-        where T : class
     {
         return await client.RateLimitedRequest(() =>
         {
@@ -151,6 +146,39 @@ public static class HttpClientExtensions
         {
             await using var stream = await response.Content.ReadAsStreamAsync(ct);
             return await JsonUtils.FromJson<T>(stream, ct);
+        }, ct: ct);
+    }
+
+    public static async Task PostJsonAsync<T>(this HttpClient client, string url, T value, string? authToken = null,
+        CancellationToken ct = default)
+    {
+        var content = JsonUtils.ToJson(value);
+        await client.RateLimitedRequest(() =>
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+            if (authToken != null) request.Headers.Add("Authorization", $"Bearer {authToken}");
+            request.Content = new StringContent(content);
+            return request;
+        }, ct: ct);
+    }
+
+    public static async Task<TResponse?> PostJsonAsync<TResponse, TRequest>(this HttpClient client, string url,
+        TRequest requestBody, string? authToken = null, CancellationToken ct = default)
+    {
+        var content = JsonUtils.ToJson(requestBody);
+        Console.WriteLine(content);
+        return await client.RateLimitedRequest(() =>
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, url);
+
+            if (authToken != null) request.Headers.Add("Authorization", $"Bearer {authToken}");
+
+            request.Content = new StringContent(content, MediaTypeHeaderValue.Parse("application/json"));
+            return request;
+        }, async response =>
+        {
+            await using var stream = await response.Content.ReadAsStreamAsync(ct);
+            return await JsonUtils.FromJson<TResponse>(stream, ct);
         }, ct: ct);
     }
 }
