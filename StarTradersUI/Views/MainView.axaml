@@ -91,14 +91,14 @@
       </Grid.ColumnDefinitions>
       <controls:SystemDrawer Height="{Binding $parent[Window].Height}">
         <controls:SystemDrawer.Resources>
-                <ContextMenu x:Key="Waypoint Context Menu">
-                        <MenuItem Header="Fly to with currently selected ship"/>
-                        <MenuItem Header="View Waypoint Information In Popout"/>
-                </ContextMenu>
-                <ContextMenu x:Key="System Context Menu">
-                        <MenuItem Header="Refresh System Waypoints"></MenuItem>
-                        <MenuItem Header="View System Information In Popout"/>
-                </ContextMenu>
+          <ContextMenu x:Key="Waypoint Context Menu">
+            <MenuItem Header="Fly to with currently selected ship"/>
+            <MenuItem Header="View Waypoint Information In Popout"/>
+          </ContextMenu>
+          <ContextMenu x:Key="System Context Menu">
+            <MenuItem Header="Refresh System Waypoints"></MenuItem>
+            <MenuItem Header="View System Information In Popout"/>
+          </ContextMenu>
         </controls:SystemDrawer.Resources>
       </controls:SystemDrawer>
       <GridSplitter Grid.Column="1" Background="Black" ResizeDirection="Columns"/>

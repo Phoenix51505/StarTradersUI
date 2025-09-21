@@ -10,6 +10,7 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using StarTradersUI.Api;
 using StarTradersUI.Api.FactionInfo;
@@ -81,6 +82,7 @@ public partial class SystemDrawer : UserControl
     public SystemDrawer()
     {
         InitializeComponent();
+        RenderOptions.SetBitmapInterpolationMode(this,BitmapInterpolationMode.None);
         GlobalStates.DoWhenInitialized(() =>
         {
             _initialized = true;
@@ -205,6 +207,19 @@ public partial class SystemDrawer : UserControl
         }
         else
         {
+            if (GetHoveredTrait(currentPosition.X, currentPosition.Y) is {} trait)
+            {
+                SetAndShowToolTip($"{trait.Name}\n{trait.Description}");
+            } else if (GetHoveredFactionSymbol(currentPosition.X, currentPosition.Y) is { } factionSymbol)
+            {
+                var fact = GlobalStates.Factions.FirstOrDefault(x => x.Symbol == factionSymbol);
+                SetAndShowToolTip($"{fact?.Name ?? "?"}\n{fact?.Description}");
+            }
+            else
+            {
+                HideToolTip();
+            }
+            
             if (GetSystemAt(currentPosition.X, currentPosition.Y) != null ||
                 GetWaypointAt(currentPosition.X, currentPosition.Y) != null)
             {
@@ -217,6 +232,27 @@ public partial class SystemDrawer : UserControl
         }
 
         _lastPosition = currentPosition;
+    }
+    
+    private string? _currentToolTipText = null;
+    private void SetAndShowToolTip(string text)
+    {
+        if (_currentToolTipText != text)
+        {
+            ToolTip.SetTip(this, text);
+            // Manually open the tooltip with a short delay
+            ToolTip.SetIsOpen(this, true);
+            _currentToolTipText = text;
+        }
+    }
+
+    private void HideToolTip()
+    {
+        if (_currentToolTipText != null)
+        {
+            ToolTip.SetIsOpen(this, false);
+            _currentToolTipText = null;
+        }
     }
 
     private SystemInformation? _waypointParentSystemInfo;
@@ -286,6 +322,7 @@ public partial class SystemDrawer : UserControl
     {
         base.Render(context);
         context.FillRectangle(BackgroundBrush, new Rect(0, 0, ActualWidth, ActualHeight));
+        _lastDrawnSymbols.Clear();
         if (!_initialized)
         {
             var text = new FormattedText("Loading Systems .. Please Wait", CultureInfo.CurrentUICulture,
@@ -464,63 +501,14 @@ public partial class SystemDrawer : UserControl
 
         context.DrawText(systemNameText, new Point(location.X - width / 2, topOfText));
 
-        if (UniverseUnitsPerPixel <= 0.1)
+        if (scaledSize >= 9)
         {
             var oldFactionInfo = system.System.Factions;
-            DrawFactionsLarge(context, location, scaledSize, system);
+            DrawSymbolsLarge(context, location, scaledSize,
+                system.System.Factions.Select(x => ((object)x.Symbol,FactionUtilities.GetFactionIcon(x.Symbol))).ToArray());
         }
     }
 
-    private void DrawFactionsLarge(DrawingContext context, Point systemCenter, double scaledSize,
-        SystemInformation system)
-    {
-        if (system.System.Factions.Length == 0) return;
-        // We usually want the factions to take up a 1/3rd by 1/3rd area in the upper right corner
-        double step;
-        int countX = 0;
-        double rectSize;
-        var origX = systemCenter.X + scaledSize / 6;
-        var curX = origX;
-        var curY = (systemCenter.Y - (scaledSize / 2)) - (scaledSize / 3);
-        switch (system.System.Factions.Length)
-        {
-            case 1:
-                step = 0;
-                rectSize = scaledSize / 3;
-                break;
-            case <= 4:
-                step = scaledSize / 6;
-                countX = 2;
-                rectSize = step * 0.975;
-                break;
-            case <= 9:
-                step = scaledSize / 9;
-                countX = 3;
-                rectSize = step * 0.975;
-                break;
-            default:
-                step = scaledSize / 12;
-                countX = 4;
-                rectSize = step * 0.975;
-                break;
-        }
-
-        var currentX = 0;
-        foreach (var faction in system.System.Factions.Select(x => x.Symbol))
-        {
-            var image = FactionUtilities.GetFactionIcon(faction);
-            var sourceRect = new Rect(0, 0, image.Size.Width, image.Size.Height);
-            var destRect = new Rect(curX, curY, rectSize, rectSize);
-            context.DrawImage(image, sourceRect, destRect);
-            currentX += 1;
-            if (currentX == countX)
-            {
-                currentX = 0;
-                curX = origX;
-                curY += step;
-            }
-        }
-    }
 
     private static readonly Brush BlackHoleLargerInside = new SolidColorBrush(new Color(255, 16, 16, 16));
 
@@ -778,7 +766,29 @@ public partial class SystemDrawer : UserControl
         }
 
         context.DrawText(waypointNameText, new Point(location.X - width / 2, topOfText));
+
+        if (waypoint.Waypoint.Faction is { Symbol: var sym })
+        {
+            DrawSymbolsLarge(context, location, scaledSize, [(waypoint.Waypoint.Faction.Symbol, FactionUtilities.GetFactionIcon(sym))]);
+        }
+
+        if (scaledSize >= 9)
+        {
+            DrawSymbolsLarge(context, location, scaledSize,
+                waypoint.Waypoint.Traits.Select(x => ((object)x, WaypointUtilities.GetWaypointTraitImage(x.Symbol))).ToArray(),
+                true);
+        }
     }
+
+    private static void DrawWaypointFaction(DrawingContext context, Point location, double scaledSize,
+        FactionSymbol sym)
+    {
+        var symX = location.X + scaledSize / 6;
+        var symY = location.Y - scaledSize / 2 - scaledSize / 3;
+        var image = FactionUtilities.GetFactionIcon(sym);
+        context.DrawImage(image, new Rect(symX, symY, scaledSize / 3, scaledSize / 3));
+    }
+
 
     private Action<DrawingContext, Point, double, WaypointInformation> DrawWell(Brush ringColor, int nRings,
         double ringThicknessScale)
@@ -945,8 +955,12 @@ public partial class SystemDrawer : UserControl
         var universeX = ToUniverseX(mouseX);
         var universeY = ToUniverseY(mouseY);
         return _currentSystems.FirstOrDefault(s =>
-            (universeX - s.X) * (universeX - s.X) + (universeY - s.Y) * (universeY - s.Y) <=
-            (s.Scale / 4) * (s.Scale / 4));
+        {
+            var dx = Math.Abs(universeX - s.X);
+            var dy = Math.Abs(universeY - s.Y);
+            return dx <= s.Scale / 4 && dy <= s.Scale / 4;
+        });
+        
     }
 
     public WaypointInformation? GetWaypointAt(double mouseX, double mouseY)
@@ -957,10 +971,12 @@ public partial class SystemDrawer : UserControl
         {
             var actualX = w.X / 10 + _waypointParentSystemInfo!.X;
             var actualY = w.Y / 10 + _waypointParentSystemInfo.Y;
-            var squareDistance = (universeX - actualX) * (universeX - actualX) +
-                                 (universeY - actualY) * (universeY - actualY);
+            // var squareDistance = (universeX - actualX) * (universeX - actualX) +
+            //                      (universeY - actualY) * (universeY - actualY);
+            var dx = Math.Abs(universeX - actualX);
+            var dy = Math.Abs(universeY - actualY);
             var radius = w.Scale / 10;
-            return squareDistance <= (radius * radius);
+            return dx <= radius && dy <= radius;
         });
     }
 
@@ -1066,6 +1082,156 @@ public partial class SystemDrawer : UserControl
                 return depth;
             }
         }
+    }
+
+    private List<(Rect bounds, object info)> _lastDrawnSymbols = [];
+    private void DrawSymbolsLarge(DrawingContext context, Point systemCenter, double scaledSize,
+        (object value,Bitmap image)[] symbols, bool isOnLeft = false)
+    {
+        if (symbols.Length == 0) return;
+        // We usually want the factions to take up a 1/3rd by 1/3rd area in the upper right corner
+        double step;
+        int countX = 0;
+        double rectSize;
+        var origX = isOnLeft ? systemCenter.X - scaledSize / 2 : systemCenter.X + scaledSize / 6;
+        var curX = origX;
+        var curY = systemCenter.Y - ((scaledSize / 2) * 1.05) - scaledSize / 3;
+        switch (symbols.Length)
+        {
+            case 1:
+                step = 0;
+                rectSize = scaledSize / 3;
+                break;
+            case 2:
+                step = scaledSize / 6;
+                curY += step;
+                rectSize = scaledSize / 6;
+                break;
+            case <= 4:
+                step = scaledSize / 6;
+                countX = 2;
+                rectSize = step * 0.975;
+                break;
+            case <= 6:
+                step = scaledSize / 9;
+                countX = 3;
+                rectSize = step * 0.975;
+                curY += step;
+                break;
+            case <= 9:
+                step = scaledSize / 9;
+                countX = 3;
+                rectSize = step * 0.975;
+                break;
+            case <= 12:
+                step = scaledSize / 12;
+                countX = 4;
+                rectSize = step * 0.975;
+                curY += step;
+                break;
+            case <= 16:
+                step = scaledSize / 12;
+                countX = 4;
+                rectSize = step * 0.975;
+                break;
+            case <= 20:
+                step = scaledSize / 15;
+                curY += step;
+                countX = 5;
+                rectSize = step * 0.975;
+                break;
+            case <= 25:
+                step = scaledSize / 15;
+                countX = 5;
+                rectSize = step * 0.975;
+                break;
+            case <= 30:
+                step = scaledSize / 18;
+                curY += step;
+                countX = 6;
+                rectSize = step * 0.975;
+                break;
+            case <= 36:
+                step = scaledSize / 18;
+                countX = 6;
+                rectSize = step * 0.975;
+                break;
+            case <= 42:
+                step = scaledSize / 21;
+                curY += step;
+                countX = 7;
+                rectSize = step * 0.975;
+                break;
+            case <= 49:
+                step = scaledSize / 21;
+                countX = 7;
+                rectSize = step * 0.975;
+                break;
+            case <= 54:
+                step = scaledSize / 24;
+                curY += step;
+                countX = 8;
+                rectSize = step * 0.975;
+                break;
+            case <= 64:
+                step = scaledSize / 24;
+                countX = 8;
+                rectSize = step * 0.975;
+                break;
+            case <= 72:
+                step = scaledSize / 27;
+                curY += step;
+                countX = 9;
+                rectSize = step * 0.975;
+                break;
+            default:
+                // We assume that for any case where stuff is being drawn like this that the maximum is 81 symbols
+                step = scaledSize / 27;
+                countX = 9;
+                rectSize = step * 0.975;
+                break;
+        }
+
+        var currentX = 0;
+        foreach (var (value, image) in symbols)
+        {
+            var sourceRect = new Rect(0, 0, image.Size.Width, image.Size.Height);
+            var destRect = new Rect(curX, curY, rectSize, rectSize);
+            _lastDrawnSymbols.Add((destRect, value));
+            context.DrawImage(image, sourceRect, destRect);
+            currentX += 1;
+            if (currentX == countX)
+            {
+                currentX = 0;
+                curX = origX;
+                curY += step;
+            }
+        }
+    }
+
+    private WaypointTrait? GetHoveredTrait(double mouseX, double mouseY)
+    {
+        foreach (var (rect, obj) in _lastDrawnSymbols.Where(x => x.info is WaypointTrait))
+        {
+            if (rect.Contains(new Point(mouseX, mouseY)))
+            {
+                return (WaypointTrait)obj;
+            }
+        }
+        return null;
+    }
+
+    private FactionSymbol? GetHoveredFactionSymbol(double mouseX, double mouseY)
+    {
+        
+        foreach (var (rect, obj) in _lastDrawnSymbols.Where(x => x.info is FactionSymbol))
+        {
+            if (rect.Contains(new Point(mouseX, mouseY)))
+            {
+                return (FactionSymbol)obj;
+            }
+        }
+        return null;
     }
 
     #endregion
