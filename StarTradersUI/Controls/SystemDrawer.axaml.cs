@@ -366,7 +366,8 @@ public partial class SystemDrawer : UserControl
 
         foreach (var system in _currentSystems)
         {
-            RenderSystem(context, system);
+            // RenderSystem(context, system);
+            RenderRenderable(context, system);
         }
 
         if (_waypointParentSystemInfo != null)
@@ -380,33 +381,26 @@ public partial class SystemDrawer : UserControl
 
             foreach (var waypoint in _waypointInformations!)
             {
-                RenderWaypoint(context, waypoint);
+                RenderRenderable(context, waypoint, x => x / 10 + _waypointParentSystemInfo!.X,
+                    y => y / 10 + _waypointParentSystemInfo!.Y);
             }
         }
 
         _lastInvalidationType = 0;
     }
 
-    #region System Rendering
-
-    // So we want to treat the system astronomical bodies as being "0.5 universe units wide" (i.e. a circle with a radius of 0.25 in the scale of the universe) by default
-    // Though some will be rendered bigger or smaller (basically dwarfs at 0.25 universe units wide, hypergiants at 1)
-    // But at a far enough zoom, they will just become points
-    // And then at a close enough zoom, we will render text under the systems
-    private void RenderSystem(DrawingContext context, SystemInformation system)
+    private void RenderRenderable(DrawingContext context, ISystemRenderable renderable, Func<double, double>? transformX = null,
+        Func<double, double>? transformY = null)
     {
-        var baseSizeInPixels = ToViewportSize(system.Scale / 2);
-        var centerPoint = new Point(ToViewportX(system.X), ToViewportY(system.Y));
-        system.Render(this, context, centerPoint, baseSizeInPixels);
+        var scale = ToViewportSize(renderable.Scale);
+        var x = ToViewportX(transformX?.Invoke(renderable.X) ?? renderable.X);
+        var y = ToViewportY(transformY?.Invoke(renderable.Y) ?? renderable.Y);
+        renderable.Render(this, context, new Point(x, y), scale);
     }
-
-    #endregion
-
-
+    
     #region Waypoint Rendering
 
     private static readonly Pen OrbitPen = new(Brushes.Gray, 1, DashStyle.Dash, PenLineCap.Round);
-
     private void RenderWaypointOrbitals(DrawingContext context, WaypointInformation waypoint)
     {
         var actualX = ToViewportX(waypoint.X / 10 + _waypointParentSystemInfo!.X);
@@ -428,16 +422,6 @@ public partial class SystemDrawer : UserControl
             context.DrawEllipse(null, OrbitPen, new Point(orbitCenterX, orbitCenterY), radius, radius);
         }
     }
-
-    private void RenderWaypoint(DrawingContext context, WaypointInformation waypoint)
-    {
-        var baseSizeInPixels = ToViewportSize(waypoint.Scale / 5d);
-        var actualX = ToViewportX(waypoint.X / 10 + _waypointParentSystemInfo!.X);
-        var actualY = ToViewportY(waypoint.Y / 10 + _waypointParentSystemInfo.Y);
-        var centerPoint = new Point(actualX, actualY);
-        waypoint.Render(this, context, centerPoint, baseSizeInPixels);
-    }
-
     #endregion
 
     #region Utilities
@@ -458,7 +442,7 @@ public partial class SystemDrawer : UserControl
         {
             var dx = Math.Abs(universeX - s.X);
             var dy = Math.Abs(universeY - s.Y);
-            return dx <= s.Scale / 4 && dy <= s.Scale / 4;
+            return dx <= s.Scale / 2 && dy <= s.Scale / 2;
         });
     }
 
@@ -474,7 +458,7 @@ public partial class SystemDrawer : UserControl
             //                      (universeY - actualY) * (universeY - actualY);
             var dx = Math.Abs(universeX - actualX);
             var dy = Math.Abs(universeY - actualY);
-            var radius = w.Scale / 10;
+            var radius = w.Scale / 2;
             return dx <= radius && dy <= radius;
         });
     }
@@ -539,7 +523,7 @@ public partial class SystemDrawer : UserControl
                 return;
             }
 
-            foreach (var waypoint in _waypointInformations.OrderBy(GetOrbitDepth))
+            foreach (var waypoint in _waypointInformations)
             {
                 var childWaypoints = waypoint.Waypoint.Orbitals
                     .Select(x => _waypointInformations.FirstOrDefault(y => y.Waypoint.Symbol == x.Symbol))
@@ -547,13 +531,13 @@ public partial class SystemDrawer : UserControl
                 if (childWaypoints.Length <= 0) continue;
 
                 var radiusSpacing = Math.PI * 2 / childWaypoints.Length;
-                var radius = waypoint.Scale * 3;
+                var radius = waypoint.Scale * 3 / WaypointInformation.WaypointDefaultScale;
                 var theta = 0d;
                 foreach (var child in childWaypoints)
                 {
                     var offsetX = Math.Cos(theta) * radius;
                     var offsetY = Math.Sin(theta) * radius;
-                    child!.Scale = waypoint.Scale / 2;
+                    child!.Scale /= 2;
                     child.OffsetX = offsetX + waypoint.OffsetX;
                     child.OffsetY = offsetY + waypoint.OffsetY;
                     theta += radiusSpacing;
@@ -561,25 +545,9 @@ public partial class SystemDrawer : UserControl
             }
 
             _waypointParentSystemInfo = currentSystemInfo;
-            // currentSystemInfo.CachedWaypoints = _waypointInformations;
-            // currentSystemInfo.CachedWaypointsGeneration = _waypointCacheGeneration;
             _lastInvalidationType = InvalidationTypeRecalculate;
             _lastUpdateSystem = null;
             InvalidateVisual();
-            return;
-
-            int GetOrbitDepth(WaypointInformation? waypoint)
-            {
-                var depth = 0;
-                while (waypoint?.Waypoint.Orbits != null)
-                {
-                    depth += 1;
-                    waypoint = _waypointInformations!.FirstOrDefault(x =>
-                        x.Waypoint.Symbol == waypoint.Waypoint.Orbits);
-                }
-
-                return depth;
-            }
         }
     }
 

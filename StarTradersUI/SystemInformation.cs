@@ -26,6 +26,8 @@ public class SystemInformation(Api.SystemInfo.System system) : ISystemRenderable
 
     #endregion
 
+    private const double SystemDefaultScale = 0.5d;
+
     private static double GetSystemScale(Api.SystemInfo.System system) => system.Type switch
     {
         SystemType.NeutronStar => 1,
@@ -39,7 +41,7 @@ public class SystemInformation(Api.SystemInfo.System system) : ISystemRenderable
         SystemType.Nebula => 2.5,
         SystemType.Unstable => 1,
         _ => throw new ArgumentOutOfRangeException()
-    };
+    } * SystemDefaultScale;
 
     public override int GetHashCode()
     {
@@ -123,7 +125,7 @@ public class SystemInformation(Api.SystemInfo.System system) : ISystemRenderable
         {
             if (drawLarger != null)
             {
-                drawLarger(context, location, scaledSize, system);
+                drawLarger(context, location, scaledSize, System);
             }
             else
             {

@@ -21,26 +21,27 @@ public class WaypointInformation(Waypoint waypoint) : ISystemRenderable
     public double OffsetX = 0;
     public double OffsetY = 0;
     public double Scale { get; set; } = GetWaypointScale(waypoint);
+    public const double WaypointDefaultScale = 1 / 5d;
     private static double GetWaypointScale(Waypoint waypoint)
     {
         return waypoint.Type switch
         {
             WaypointType.Planet => 1,
             WaypointType.GasGiant => 2,
-            WaypointType.Moon => 0.75,
-            WaypointType.OrbitalStation => 0.125,
-            WaypointType.JumpGate => 0.25,
+            WaypointType.Moon => 1,
+            WaypointType.OrbitalStation => 0.5,
+            WaypointType.JumpGate => 0.33,
             WaypointType.AsteroidField => 1,
-            WaypointType.Asteroid => 0.25,
-            WaypointType.EngineeredAsteroid => 0.25,
-            WaypointType.AsteroidBase => 0.25,
+            WaypointType.Asteroid => 0.33,
+            WaypointType.EngineeredAsteroid => 0.33,
+            WaypointType.AsteroidBase => 0.33,
             WaypointType.Nebula => 3,
-            WaypointType.DebrisField => 0.25,
+            WaypointType.DebrisField => 0.33,
             WaypointType.GravityWell => 2,
             WaypointType.ArtificialGravityWell => 2,
-            WaypointType.FuelStation => 0.25,
+            WaypointType.FuelStation => 0.33,
             _ => throw new ArgumentOutOfRangeException()
-        };
+        } * WaypointDefaultScale;
     }
 
     public override int GetHashCode()
