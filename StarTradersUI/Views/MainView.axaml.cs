@@ -93,11 +93,12 @@ public partial class MainView : UserControl
         try
         {
             var agentDetails =
-                await GlobalStates.client.GetJsonAsync<Agent>("https://api.spacetraders.io/v2/my/agent", SignBox.Text);
+                await GlobalStates.client.GetJsonAsync<ResponseWithData<Agent>>("https://api.spacetraders.io/v2/my/agent", SignBox.Text);
             GlobalStates.authorization = SignBox.Text;
-            await GlobalStates.AddAgent(SignBox.Text!, agentDetails!.Symbol);
-            Console.WriteLine($"Logged in as agent: {agentDetails.Symbol}");
+            await GlobalStates.AddAgent(SignBox.Text!, agentDetails!.Data.Symbol);
+            Console.WriteLine($"Logged in as agent: {agentDetails.Data.Symbol}");
             LogInUI.IsVisible = false;
+            MainScreen.IsVisible = true;
         }
         catch (HttpStatusException exception)
         {
@@ -137,8 +138,11 @@ public partial class MainView : UserControl
                 await GlobalStates.client.PostJsonAsync<ResponseWithData<AgentRegisterResponse>, AgentRegisterRequest>(
                     "https://api.spacetraders.io/v2/register", request, RegisterAccountBox.Text);
             await GlobalStates.AddAgent(response!.Data.Token, response.Data.Agent.Symbol);
+            GlobalStates.authorization = response.Data.Token;
             GlobalStates.CachedAccountToken = RegisterAccountBox.Text;
             Console.WriteLine($"Registered agent: {response.Data.Agent.Symbol}");
+            LogInUI.IsVisible = false;
+            MainScreen.IsVisible = true;
         }
         catch (HttpStatusException exception)
         {
