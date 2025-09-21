@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace StarTradersUI.Utilities;
+namespace StarTradersUI.Utilities.Interfaces;
 
 public interface IPositionable
 {

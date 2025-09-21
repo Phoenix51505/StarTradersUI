@@ -17,6 +17,8 @@ using StarTradersUI.Api.FactionInfo;
 using StarTradersUI.Api.SystemInfo;
 using StarTradersUI.Api.WaypointInfo;
 using StarTradersUI.Utilities;
+using StarTradersUI.Utilities.Drawing;
+using StarTradersUI.Utilities.Interfaces;
 
 namespace StarTradersUI.Controls;
 
@@ -74,7 +76,7 @@ public partial class SystemDrawer : UserControl
     private double CenterX => ActualWidth / 2;
     private double CenterY => ActualHeight / 2;
 
-    private double UniverseUnitsPerPixel => ViewportScale / ActualWidth;
+    internal double UniverseUnitsPerPixel => ViewportScale / ActualWidth;
 
 
     // Since we are going to draw waypoints at 1/10th the scale 
@@ -82,7 +84,7 @@ public partial class SystemDrawer : UserControl
     public SystemDrawer()
     {
         InitializeComponent();
-        RenderOptions.SetBitmapInterpolationMode(this,BitmapInterpolationMode.None);
+        RenderOptions.SetBitmapInterpolationMode(this, BitmapInterpolationMode.None);
         GlobalStates.DoWhenInitialized(() =>
         {
             _initialized = true;
@@ -172,10 +174,6 @@ public partial class SystemDrawer : UserControl
     {
         base.OnPointerMoved(e);
         var currentPosition = e.GetPosition(this);
-        // var positionRelativeToCenter = (x: currentPosition.X - CenterX, y: currentPosition.Y - CenterY);
-        // var globalZoomPositionRelativeToCenter = (x: positionRelativeToCenter.x * UniverseUnitsPerPixel,
-        //     y: positionRelativeToCenter.y * UniverseUnitsPerPixel);
-        // Console.WriteLine($"Moving cursor over {globalZoomPositionRelativeToCenter.x}, {globalZoomPositionRelativeToCenter.y}");
         if (IsDragging)
         {
             var delta = (x: currentPosition.X - _lastPosition.X, y: currentPosition.Y - _lastPosition.Y);
@@ -207,10 +205,11 @@ public partial class SystemDrawer : UserControl
         }
         else
         {
-            if (GetHoveredTrait(currentPosition.X, currentPosition.Y) is {} trait)
+            if (GetHoveredTrait(currentPosition.X, currentPosition.Y) is { } trait)
             {
                 SetAndShowToolTip($"{trait.Name}\n{trait.Description}");
-            } else if (GetHoveredFactionSymbol(currentPosition.X, currentPosition.Y) is { } factionSymbol)
+            }
+            else if (GetHoveredFactionSymbol(currentPosition.X, currentPosition.Y) is { } factionSymbol)
             {
                 var fact = GlobalStates.Factions.FirstOrDefault(x => x.Symbol == factionSymbol);
                 SetAndShowToolTip($"{fact?.Name ?? "?"}\n{fact?.Description}");
@@ -219,7 +218,7 @@ public partial class SystemDrawer : UserControl
             {
                 HideToolTip();
             }
-            
+
             if (GetSystemAt(currentPosition.X, currentPosition.Y) != null ||
                 GetWaypointAt(currentPosition.X, currentPosition.Y) != null)
             {
@@ -233,8 +232,9 @@ public partial class SystemDrawer : UserControl
 
         _lastPosition = currentPosition;
     }
-    
+
     private string? _currentToolTipText = null;
+
     private void SetAndShowToolTip(string text)
     {
         if (_currentToolTipText != text)
@@ -273,7 +273,6 @@ public partial class SystemDrawer : UserControl
         };
         if (Math.Abs(ratio - 1) < 0.01) return;
         var newScale = Math.Clamp(ViewportScale * ratio, MinScale, MaxScale);
-        var oldUnitsPerPixel = UniverseUnitsPerPixel;
         ratio = newScale / ViewportScale;
         ViewportCenterX += globalZoomPositionRelativeToCenter.x * (1 - ratio);
         ViewportCenterY += globalZoomPositionRelativeToCenter.y * (1 - ratio);
@@ -308,7 +307,8 @@ public partial class SystemDrawer : UserControl
             DispatchWaypointUpdate(closestSystem);
         }
 
-        _lastInvalidationType = ratio < 1 ? InvalidationTypeZoomIn : InvalidationTypeRecalculate;
+        _lastInvalidationType = Math.Max(_lastInvalidationType,
+            ratio < 1 ? InvalidationTypeZoomIn : InvalidationTypeRecalculate);
 
         InvalidateVisual();
     }
@@ -322,11 +322,12 @@ public partial class SystemDrawer : UserControl
     {
         base.Render(context);
         context.FillRectangle(BackgroundBrush, new Rect(0, 0, ActualWidth, ActualHeight));
-        _lastDrawnSymbols.Clear();
+        FactionDrawer.ResetSymbolList();
+        WaypointDrawer.ResetSymbolList();
         if (!_initialized)
         {
             var text = new FormattedText("Loading Systems .. Please Wait", CultureInfo.CurrentUICulture,
-                flowDirection: FlowDirection.LeftToRight, Typeface.Default, 12, WhiteDwarfDefaultBrush);
+                flowDirection: FlowDirection.LeftToRight, Typeface.Default, 12, Brushes.White);
             context.DrawText(text, new Point(CenterX - text.Width / 2, CenterY - text.Height / 2));
             return;
         }
@@ -337,7 +338,7 @@ public partial class SystemDrawer : UserControl
         var formattedText = new FormattedText(
             $"1 Pixel = {UniverseUnitsPerPixel:F4} units, width {ViewportScale:F4} units, drawing {_currentSystems.Count} systems\nLast Mouse Position: X: {mousePosUniverse.x:F4}, Y: {mousePosUniverse.y:F4}\nWaypoint count: {_waypointInformations?.Length ?? 0}",
             CultureInfo.CurrentUICulture,
-            FlowDirection.LeftToRight, Typeface.Default, 12, WhiteDwarfDefaultBrush);
+            FlowDirection.LeftToRight, Typeface.Default, 12, Brushes.White);
         context.DrawText(formattedText, new Point(10, 10));
 
         var currentRenderBoundsQuery = (sx: ViewportCenterX - ViewportScale / 2 - 4,
@@ -388,229 +389,15 @@ public partial class SystemDrawer : UserControl
 
     #region System Rendering
 
-    private static readonly Brush NeutronStarDefaultBrush = new SolidColorBrush(new Color(255, 210, 237, 23));
-    private static readonly Brush RedStarDefaultBrush = new SolidColorBrush(Colors.Red);
-    private static readonly Brush OrangeStarDefaultBrush = new SolidColorBrush(Colors.Orange);
-    private static readonly Brush BlueStarDefaultBrush = new SolidColorBrush(Colors.Blue);
-    private static readonly Brush YoungStarDefaultBrush = new SolidColorBrush(Colors.Yellow);
-    private static readonly Brush WhiteDwarfDefaultBrush = new SolidColorBrush(Colors.White);
-    private static readonly Brush BlackHoleDefaultBrush = new SolidColorBrush(Colors.DimGray);
-    private static readonly Brush HyperGiantDefaultBrush = new SolidColorBrush(Colors.OrangeRed);
-    private static readonly Brush NebulaDefaultBrush = new SolidColorBrush(Colors.DeepPink);
-    private static readonly Brush UnstableDefaultBrush = new SolidColorBrush(Colors.Purple);
-
     // So we want to treat the system astronomical bodies as being "0.5 universe units wide" (i.e. a circle with a radius of 0.25 in the scale of the universe) by default
     // Though some will be rendered bigger or smaller (basically dwarfs at 0.25 universe units wide, hypergiants at 1)
     // But at a far enough zoom, they will just become points
     // And then at a close enough zoom, we will render text under the systems
-    public void RenderSystem(DrawingContext context, SystemInformation system)
+    private void RenderSystem(DrawingContext context, SystemInformation system)
     {
         var baseSizeInPixels = ToViewportSize(system.Scale / 2);
         var centerPoint = new Point(ToViewportX(system.X), ToViewportY(system.Y));
-        switch (system.System.Type)
-        {
-            case SystemType.NeutronStar:
-                DrawSystem(context, NeutronStarDefaultBrush, centerPoint, baseSizeInPixels, system,
-                    DrawSpotted<SystemInformation>(NeutronStarDefaultBrush));
-                break;
-            case SystemType.RedStar:
-                DrawSystem(context, RedStarDefaultBrush, centerPoint, baseSizeInPixels, system,
-                    DrawSpotted<SystemInformation>(RedStarDefaultBrush));
-                break;
-            case SystemType.OrangeStar:
-                DrawSystem(context, OrangeStarDefaultBrush, centerPoint, baseSizeInPixels, system,
-                    DrawSpotted<SystemInformation>(OrangeStarDefaultBrush));
-                break;
-            case SystemType.BlueStar:
-                DrawSystem(context, BlueStarDefaultBrush, centerPoint, baseSizeInPixels, system,
-                    DrawSpotted<SystemInformation>(BlueStarDefaultBrush));
-                break;
-            case SystemType.YoungStar:
-                DrawSystem(context, YoungStarDefaultBrush, centerPoint, baseSizeInPixels, system,
-                    DrawSpotted<SystemInformation>(YoungStarDefaultBrush));
-                break;
-            case SystemType.WhiteDwarf:
-                DrawSystem(context, WhiteDwarfDefaultBrush, centerPoint, baseSizeInPixels, system,
-                    DrawSpotted<SystemInformation>(WhiteDwarfDefaultBrush));
-                break;
-            case SystemType.BlackHole:
-                DrawSystem(context, BlackHoleDefaultBrush, centerPoint, baseSizeInPixels, system, DrawBlackHole);
-                break;
-            case SystemType.Hypergiant:
-                DrawSystem(context, HyperGiantDefaultBrush, centerPoint, baseSizeInPixels, system,
-                    DrawSpotted<SystemInformation>(HyperGiantDefaultBrush));
-                break;
-            case SystemType.Nebula:
-                DrawSystem(context, NebulaDefaultBrush, centerPoint, baseSizeInPixels, system,
-                    DrawSpotted<SystemInformation>(NebulaBackground, NebulaStar, NebulaBorder));
-                break;
-            case SystemType.Unstable:
-                DrawSystem(context, UnstableDefaultBrush, centerPoint, baseSizeInPixels, system,
-                    DrawSpotted<SystemInformation>(UnstableDefaultBrush, border: new SolidColorBrush(Colors.Purple)));
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-    }
-
-
-    public void DrawSystem(DrawingContext context, Brush brush, Point location, double scaledSize,
-        SystemInformation system,
-        Action<DrawingContext, Point, double, SystemInformation>? drawLarger = null)
-    {
-        if (scaledSize <= 1)
-        {
-            context.DrawEllipse(brush, null, location, 0.5, 0.5);
-        }
-        else
-        {
-            if (drawLarger != null)
-            {
-                drawLarger(context, location, scaledSize, system);
-            }
-            else
-            {
-                context.DrawEllipse(brush, null, location, scaledSize / 2, scaledSize / 2);
-            }
-        }
-
-        // At this point, we need to start drawing text and other decorations
-        if (UniverseUnitsPerPixel <= 3)
-        {
-            DrawSystemDecorations(context, location, scaledSize, system);
-        }
-    }
-
-    private void DrawSystemDecorations(DrawingContext context, Point location, double scaledSize,
-        SystemInformation system)
-    {
-        var bottom = location.Y + scaledSize * 1.1 / 2;
-        var topOfText = bottom + 3;
-        double width;
-        if (system.SystemNameText is { } systemNameText)
-        {
-            width = system.SystemNameWidth;
-        }
-        else
-        {
-            systemNameText = system.SystemNameText = new FormattedText($"{system.System.Symbol} - {system.System.Name}",
-                CultureInfo.CurrentUICulture,
-                FlowDirection.LeftToRight, Typeface.Default, 14, WhiteDwarfDefaultBrush);
-            width = system.SystemNameWidth = systemNameText.Width;
-        }
-
-        context.DrawText(systemNameText, new Point(location.X - width / 2, topOfText));
-
-        if (scaledSize >= 9)
-        {
-            var oldFactionInfo = system.System.Factions;
-            DrawSymbolsLarge(context, location, scaledSize,
-                system.System.Factions.Select(x => ((object)x.Symbol,FactionUtilities.GetFactionIcon(x.Symbol))).ToArray());
-        }
-    }
-
-
-    private static readonly Brush BlackHoleLargerInside = new SolidColorBrush(new Color(255, 16, 16, 16));
-
-    private void DrawBlackHole(DrawingContext context, Point location, double scaledSize, SystemInformation system)
-    {
-        Pen blackHoleBorder = new(Brushes.OrangeRed, Math.Max(1, scaledSize / 20));
-        context.DrawEllipse(BlackHoleLargerInside, blackHoleBorder, location, scaledSize / 2, scaledSize / 2);
-    }
-
-    private static readonly Brush NebulaBackground = new SolidColorBrush(new Color(255, 74, 95, 159));
-    private static readonly Brush NebulaBorder = new SolidColorBrush(new Color(255, 199, 116, 87));
-    private static readonly Brush NebulaStar = new SolidColorBrush(new Color(255, 174, 223, 235));
-
-    // Todo find a more random arrangement of stars
-    private static readonly (double x, double y, double relativeSize)[][] SpotLocations =
-    [
-        ComputeSpotLocations(10), ComputeSpotLocations(10), ComputeSpotLocations(10), ComputeSpotLocations(10),
-        ComputeSpotLocations(15), ComputeSpotLocations(15), ComputeSpotLocations(15), ComputeSpotLocations(15),
-        ComputeSpotLocations(20), ComputeSpotLocations(20), ComputeSpotLocations(20), ComputeSpotLocations(20),
-        ComputeSpotLocations(25), ComputeSpotLocations(25), ComputeSpotLocations(25), ComputeSpotLocations(25),
-        ComputeSpotLocations(30), ComputeSpotLocations(30), ComputeSpotLocations(30), ComputeSpotLocations(30),
-    ];
-
-    private static (double x, double y, double relativeSize)[] ComputeSpotLocations(int count)
-    {
-        var result = new List<(double, double, double)>(count);
-        var random = new Random();
-        while (result.Count < count)
-        {
-            var theta = 2 * Math.PI * random.NextDouble();
-            var r = Math.Sqrt(random.NextDouble());
-            var x = r * Math.Cos(theta);
-            var y = r * Math.Sin(theta);
-            var maxRadius = 1 - r;
-            if (maxRadius < 0.02)
-            {
-                continue;
-            }
-
-            var radius = Uniform(0.2, Math.Min(0.02, maxRadius));
-            bool collides = false;
-            foreach (var star in result)
-            {
-                var (sx, sy, sr) = star;
-                if ((x - sx) * (x - sx) + (y - sy) * (y - sy) <= (radius + sr) * (radius + sr))
-                {
-                    collides = true;
-                    break;
-                }
-            }
-
-            if (collides) continue;
-            result.Add((x, y, radius));
-        }
-
-        return result.ToArray();
-
-        double Uniform(double min, double max)
-        {
-            var distance = max - min;
-            var value = random.NextDouble();
-            return (value * distance) + min;
-        }
-    }
-
-    private Action<DrawingContext, Point, double, T> DrawSpotted<T>(Brush backgroundBrush,
-        Brush? innerBrush = null, Brush? border = null)
-    {
-        return Draw;
-
-        void Draw(DrawingContext context, Point location, double scaledSize, T system)
-        {
-            if (innerBrush == null)
-            {
-                if (backgroundBrush is not SolidColorBrush brush)
-                    throw new ArgumentNullException(nameof(backgroundBrush));
-                innerBrush = new SolidColorBrush(new Color(255, (byte)(brush.Color.R * 0.75),
-                    (byte)(brush.Color.G * 0.75), (byte)(brush.Color.B * 0.75)));
-            }
-
-            if (border == null)
-            {
-                if (backgroundBrush is not SolidColorBrush brush)
-                    throw new ArgumentNullException(nameof(backgroundBrush));
-                border = new SolidColorBrush(new Color(255, (byte)Math.Min(255, brush.Color.R * 1.25),
-                    (byte)Math.Min(255, brush.Color.G * 1.25), (byte)Math.Min(255, brush.Color.B * 1.25)));
-            }
-
-            var borderPen = new Pen(border, Math.Max(1, scaledSize / 20));
-            context.DrawEllipse(backgroundBrush, borderPen, location, scaledSize / 2, scaledSize / 2);
-            var index = Math.Abs(system!.GetHashCode()) % SpotLocations.Length;
-            foreach (var (x, y, diameter) in SpotLocations[index])
-            {
-                var trueX = x * (scaledSize * 0.9) / 2 + location.X;
-                var trueY = y * (scaledSize * 0.9) / 2 + location.Y;
-                var trueDiameter = diameter * (scaledSize * 0.9) / 2;
-                if (trueDiameter >= 1)
-                {
-                    context.DrawEllipse(innerBrush, null, new Point(trueX, trueY), trueDiameter / 2, trueDiameter / 2);
-                }
-            }
-        }
+        system.Render(this, context, centerPoint, baseSizeInPixels);
     }
 
     #endregion
@@ -619,88 +406,6 @@ public partial class SystemDrawer : UserControl
     #region Waypoint Rendering
 
     private static readonly Pen OrbitPen = new(Brushes.Gray, 1, DashStyle.Dash, PenLineCap.Round);
-
-
-    private static readonly Brush PlanetBrush = new SolidColorBrush(Colors.Green);
-    private static readonly Brush GasGiantBrush = new SolidColorBrush(Colors.Blue);
-    private static readonly Brush MoonBrush = new SolidColorBrush(Colors.Gray);
-    private static readonly Brush OrbitalStationBrush = new SolidColorBrush(Colors.Orange);
-    private static readonly Brush JumpGateBrush = new SolidColorBrush(Colors.Purple);
-    private static readonly Brush AsteroidFieldBrush = new SolidColorBrush(Colors.SaddleBrown);
-    private static readonly Brush AsteroidBrush = new SolidColorBrush(Colors.DarkGray);
-    private static readonly Brush EngineeredAsteroidBrush = new SolidColorBrush(Colors.LightGray);
-    private static readonly Brush AsteroidBaseBrush = new SolidColorBrush(Colors.SlateGray);
-    private static readonly Brush DebrisFieldBrush = new SolidColorBrush(Colors.OrangeRed);
-    private static readonly Brush GravityWellBrush = new SolidColorBrush(Colors.Pink);
-    private static readonly Brush ArtificialGravityWellBrush = new SolidColorBrush(Colors.DeepPink);
-    private static readonly Brush FuelStationBrush = new SolidColorBrush(Colors.Red);
-
-    private void RenderWaypoint(DrawingContext context, WaypointInformation waypoint)
-    {
-        var baseSizeInPixels = ToViewportSize(waypoint.Scale / 5d);
-        var actualX = ToViewportX(waypoint.X / 10 + _waypointParentSystemInfo!.X);
-        var actualY = ToViewportY(waypoint.Y / 10 + _waypointParentSystemInfo.Y);
-
-        var centerPoint = new Point(actualX, actualY);
-        switch (waypoint.Waypoint.Type)
-        {
-            case WaypointType.Planet:
-                DrawWaypoint(context, PlanetBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawSpotted<WaypointInformation>(PlanetBrush, GasGiantBrush));
-                break;
-            case WaypointType.GasGiant:
-                DrawWaypoint(context, GasGiantBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawSpotted<WaypointInformation>(GasGiantBrush));
-                break;
-            case WaypointType.Moon:
-                DrawWaypoint(context, MoonBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawSpotted<WaypointInformation>(MoonBrush));
-                break;
-            case WaypointType.OrbitalStation:
-                DrawWaypoint(context, OrbitalStationBrush, centerPoint, baseSizeInPixels, waypoint, DrawOrbitalStation);
-                break;
-            case WaypointType.JumpGate:
-                DrawWaypoint(context, JumpGateBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawWell(JumpGateBrush, 2, 1 / 20d));
-                break;
-            case WaypointType.AsteroidField:
-                DrawWaypoint(context, AsteroidFieldBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawSpotted<WaypointInformation>(null!, AsteroidFieldBrush,
-                        new SolidColorBrush(Colors.Transparent)));
-                break;
-            case WaypointType.Asteroid:
-                DrawWaypoint(context, AsteroidBrush, centerPoint, baseSizeInPixels, waypoint, DrawAsteroid);
-                break;
-            case WaypointType.EngineeredAsteroid:
-                DrawWaypoint(context, EngineeredAsteroidBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawEngineeredAsteroid);
-                break;
-            case WaypointType.AsteroidBase:
-                DrawWaypoint(context, AsteroidBaseBrush, centerPoint, baseSizeInPixels, waypoint, DrawAsteroidBase);
-                break;
-            case WaypointType.Nebula:
-                DrawWaypoint(context, NebulaDefaultBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawSpotted<WaypointInformation>(NebulaBackground, NebulaBorder, NebulaBorder));
-                break;
-            case WaypointType.DebrisField:
-                DrawWaypoint(context, DebrisFieldBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawSpotted<WaypointInformation>(null!, DebrisFieldBrush, new SolidColorBrush(Colors.Transparent)));
-                break;
-            case WaypointType.GravityWell:
-                DrawWaypoint(context, GravityWellBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawWell(GravityWellBrush, 10, 1 / 60d));
-                break;
-            case WaypointType.ArtificialGravityWell:
-                DrawWaypoint(context, ArtificialGravityWellBrush, centerPoint, baseSizeInPixels, waypoint,
-                    DrawWell(ArtificialGravityWellBrush, 10, 1 / 60d));
-                break;
-            case WaypointType.FuelStation:
-                DrawWaypoint(context, FuelStationBrush, centerPoint, baseSizeInPixels, waypoint, DrawFuelStation);
-                break;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
-    }
 
     private void RenderWaypointOrbitals(DrawingContext context, WaypointInformation waypoint)
     {
@@ -724,218 +429,13 @@ public partial class SystemDrawer : UserControl
         }
     }
 
-    public void DrawWaypoint(DrawingContext context, Brush brush, Point location, double scaledSize,
-        WaypointInformation waypoint,
-        Action<DrawingContext, Point, double, WaypointInformation>? drawLarger = null)
+    private void RenderWaypoint(DrawingContext context, WaypointInformation waypoint)
     {
-        if (scaledSize <= 1)
-        {
-            context.DrawEllipse(brush, null, location, 0.5, 0.5);
-        }
-        else
-        {
-            if (drawLarger != null)
-            {
-                drawLarger(context, location, scaledSize, waypoint);
-            }
-            else
-            {
-                context.DrawEllipse(brush, null, location, scaledSize / 2, scaledSize / 2);
-            }
-        }
-
-        DrawWaypointDecorations(context, location, scaledSize, waypoint);
-    }
-
-    private void DrawWaypointDecorations(DrawingContext context, Point location, double scaledSize,
-        WaypointInformation waypoint)
-    {
-        var bottom = location.Y + scaledSize / 2;
-        var topOfText = bottom + 3;
-        double width;
-        if (waypoint.WaypointNameText is { } waypointNameText)
-        {
-            width = waypoint.WaypointNameWidth;
-        }
-        else
-        {
-            waypointNameText = waypoint.WaypointNameText = new FormattedText($"{waypoint.Waypoint.Symbol}",
-                CultureInfo.CurrentUICulture,
-                FlowDirection.LeftToRight, Typeface.Default, 10, WhiteDwarfDefaultBrush);
-            width = waypoint.WaypointNameWidth = waypointNameText.Width;
-        }
-
-        context.DrawText(waypointNameText, new Point(location.X - width / 2, topOfText));
-
-        if (waypoint.Waypoint.Faction is { Symbol: var sym })
-        {
-            DrawSymbolsLarge(context, location, scaledSize, [(waypoint.Waypoint.Faction.Symbol, FactionUtilities.GetFactionIcon(sym))]);
-        }
-
-        if (scaledSize >= 9)
-        {
-            DrawSymbolsLarge(context, location, scaledSize,
-                waypoint.Waypoint.Traits.Select(x => ((object)x, WaypointUtilities.GetWaypointTraitImage(x.Symbol))).ToArray(),
-                true);
-        }
-    }
-
-    private static void DrawWaypointFaction(DrawingContext context, Point location, double scaledSize,
-        FactionSymbol sym)
-    {
-        var symX = location.X + scaledSize / 6;
-        var symY = location.Y - scaledSize / 2 - scaledSize / 3;
-        var image = FactionUtilities.GetFactionIcon(sym);
-        context.DrawImage(image, new Rect(symX, symY, scaledSize / 3, scaledSize / 3));
-    }
-
-
-    private Action<DrawingContext, Point, double, WaypointInformation> DrawWell(Brush ringColor, int nRings,
-        double ringThicknessScale)
-    {
-        return Draw;
-
-        void Draw(DrawingContext context, Point location, double scaledSize, WaypointInformation waypoint)
-        {
-            var ringStep = scaledSize / nRings;
-            var startingSize = scaledSize;
-            var ringPen = new Pen(ringColor, Math.Max(1, ringThicknessScale * scaledSize));
-            for (var i = 0; i < nRings; i++)
-            {
-                context.DrawEllipse(null, ringPen, location, startingSize / 2, startingSize / 2);
-                startingSize -= ringStep;
-            }
-        }
-    }
-
-    private void DrawOrbitalStation(DrawingContext context, Point location, double scaledSize,
-        WaypointInformation waypoint)
-    {
-        // What do we want, hmmm, maybe like a rounded line down the center, and 2 spokes out to the side, the left being orange, and the right being blue
-        var coreBrush = Brushes.LightSlateGray;
-        var coreWidth = Math.Max(1, scaledSize / 15);
-        var corePen = new Pen(coreBrush, coreWidth, lineCap: PenLineCap.Round);
-        var panelBrush = OrbitalStationBrush;
-        context.DrawRectangle(panelBrush, null,
-            new Rect(location.X - scaledSize / 2 + coreWidth / 2, location.Y - scaledSize / 2, scaledSize / 3,
-                scaledSize));
-        context.DrawRectangle(panelBrush, null,
-            new Rect(location.X + scaledSize / 6 - coreWidth / 2, location.Y - scaledSize / 2, scaledSize / 3,
-                scaledSize));
-        context.DrawLine(corePen, new Point(location.X, location.Y - scaledSize / 2 + coreWidth / 2),
-            new Point(location.X, location.Y + scaledSize / 2 - coreWidth / 2));
-        context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y - scaledSize / 4),
-            new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y - scaledSize / 4));
-        context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y),
-            new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y));
-        context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y + scaledSize / 4),
-            new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y + scaledSize / 4));
-    }
-
-    private void DrawFuelStation(DrawingContext context, Point location, double scaledSize,
-        WaypointInformation waypoint)
-    {
-        var coreBrush = Brushes.LightSlateGray;
-        var coreWidth = Math.Max(1, scaledSize / 15);
-        var corePen = new Pen(coreBrush, coreWidth, lineCap: PenLineCap.Round);
-        var tankBrush = FuelStationBrush;
-        context.DrawRectangle(tankBrush, null,
-            new Rect(location.X - scaledSize / 3, location.Y - scaledSize / 2, 2 * scaledSize / 3, scaledSize),
-            radiusX: scaledSize / 20, radiusY: scaledSize / 20);
-        context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y - scaledSize / 4),
-            new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y - scaledSize / 4));
-        context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y),
-            new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y));
-        context.DrawLine(corePen, new Point(location.X - scaledSize / 2 + coreWidth / 2, location.Y + scaledSize / 4),
-            new Point(location.X + scaledSize / 2 - coreWidth / 2, location.Y + scaledSize / 4));
-    }
-
-    private static readonly (double x, double y)[][] AsteroidPoints =
-    [
-        GenerateAsteroidPoints(10), GenerateAsteroidPoints(10), GenerateAsteroidPoints(10), GenerateAsteroidPoints(10),
-        GenerateAsteroidPoints(15), GenerateAsteroidPoints(15), GenerateAsteroidPoints(15), GenerateAsteroidPoints(15),
-        GenerateAsteroidPoints(20), GenerateAsteroidPoints(20), GenerateAsteroidPoints(20), GenerateAsteroidPoints(20),
-        GenerateAsteroidPoints(25), GenerateAsteroidPoints(25), GenerateAsteroidPoints(25), GenerateAsteroidPoints(25),
-        GenerateAsteroidPoints(30), GenerateAsteroidPoints(30), GenerateAsteroidPoints(30), GenerateAsteroidPoints(30),
-    ];
-
-    private static (double x, double y)[] GenerateAsteroidPoints(int size)
-    {
-        var result = new (double x, double y)[size];
-        var thetaStep = 2 * Math.PI / size;
-        var random = new Random();
-        for (var i = 0; i < size; i++)
-        {
-            var theta = i * thetaStep;
-            var r = Math.Sqrt(Uniform(0.25, 1)); // 0.5 squared, 1 squared, 
-            var x = r * Math.Cos(theta);
-            var y = r * Math.Sin(theta);
-            result[i] = (x, y);
-        }
-
-        return result;
-
-        double Uniform(double min, double max)
-        {
-            var distance = max - min;
-            var value = random.NextDouble();
-            return (value * distance) + min;
-        }
-    }
-
-    private void DrawAsteroid(DrawingContext context, Point location, double scaledSize, WaypointInformation waypoint)
-    {
-        var streamGeometry = new StreamGeometry();
-        using (var ctx = streamGeometry.Open())
-        {
-            var points = AsteroidPoints[Math.Abs(waypoint.GetHashCode()) % AsteroidPoints.Length];
-            var start = points[0];
-            ctx.BeginFigure(new Point(location.X + start.x * scaledSize / 2, location.Y + start.y * scaledSize / 2),
-                true);
-            for (var i = 1; i < points.Length; i++)
-            {
-                var point = points[i];
-                ctx.LineTo(new Point(location.X + point.x * scaledSize / 2, location.Y + point.y * scaledSize / 2));
-            }
-
-            ctx.EndFigure(true);
-        }
-
-        context.DrawGeometry(AsteroidBrush, null, streamGeometry);
-    }
-
-    private void DrawEngineeredAsteroid(DrawingContext context, Point location, double scaledSize,
-        WaypointInformation waypoint)
-    {
-        var streamGeometry = new StreamGeometry();
-        using (var ctx = streamGeometry.Open())
-        {
-            var points = AsteroidPoints[Math.Abs(waypoint.GetHashCode()) % AsteroidPoints.Length];
-            var start = points[0];
-            ctx.BeginFigure(new Point(location.X + start.x * scaledSize / 2.1, location.Y + start.y * scaledSize / 2.1),
-                true);
-            for (var i = 1; i < points.Length; i++)
-            {
-                var point = points[i];
-                ctx.LineTo(new Point(location.X + point.x * scaledSize / 2.1, location.Y + point.y * scaledSize / 2.1));
-            }
-
-            ctx.EndFigure(true);
-        }
-
-        var pen = new Pen(Brushes.OrangeRed, scaledSize / 40d);
-
-        context.DrawGeometry(AsteroidBrush, pen, streamGeometry);
-    }
-
-    private static readonly Brush AsteroidBaseAtmosphere = new SolidColorBrush();
-
-    private void DrawAsteroidBase(DrawingContext context, Point location, double scaledSize,
-        WaypointInformation waypoint)
-    {
-        var baseAtmosphere = new SolidColorBrush(new Color(127, 173, 216, 230));
-        DrawEngineeredAsteroid(context, location, scaledSize, waypoint);
-        context.DrawEllipse(baseAtmosphere, null, location, scaledSize / 2, scaledSize / 2);
+        var baseSizeInPixels = ToViewportSize(waypoint.Scale / 5d);
+        var actualX = ToViewportX(waypoint.X / 10 + _waypointParentSystemInfo!.X);
+        var actualY = ToViewportY(waypoint.Y / 10 + _waypointParentSystemInfo.Y);
+        var centerPoint = new Point(actualX, actualY);
+        waypoint.Render(this, context, centerPoint, baseSizeInPixels);
     }
 
     #endregion
@@ -960,7 +460,6 @@ public partial class SystemDrawer : UserControl
             var dy = Math.Abs(universeY - s.Y);
             return dx <= s.Scale / 4 && dy <= s.Scale / 4;
         });
-        
     }
 
     public WaypointInformation? GetWaypointAt(double mouseX, double mouseY)
@@ -1084,153 +583,32 @@ public partial class SystemDrawer : UserControl
         }
     }
 
-    private List<(Rect bounds, object info)> _lastDrawnSymbols = [];
-    private void DrawSymbolsLarge(DrawingContext context, Point systemCenter, double scaledSize,
-        (object value,Bitmap image)[] symbols, bool isOnLeft = false)
-    {
-        if (symbols.Length == 0) return;
-        // We usually want the factions to take up a 1/3rd by 1/3rd area in the upper right corner
-        double step;
-        int countX = 0;
-        double rectSize;
-        var origX = isOnLeft ? systemCenter.X - scaledSize / 2 : systemCenter.X + scaledSize / 6;
-        var curX = origX;
-        var curY = systemCenter.Y - ((scaledSize / 2) * 1.05) - scaledSize / 3;
-        switch (symbols.Length)
-        {
-            case 1:
-                step = 0;
-                rectSize = scaledSize / 3;
-                break;
-            case 2:
-                step = scaledSize / 6;
-                curY += step;
-                rectSize = scaledSize / 6;
-                break;
-            case <= 4:
-                step = scaledSize / 6;
-                countX = 2;
-                rectSize = step * 0.975;
-                break;
-            case <= 6:
-                step = scaledSize / 9;
-                countX = 3;
-                rectSize = step * 0.975;
-                curY += step;
-                break;
-            case <= 9:
-                step = scaledSize / 9;
-                countX = 3;
-                rectSize = step * 0.975;
-                break;
-            case <= 12:
-                step = scaledSize / 12;
-                countX = 4;
-                rectSize = step * 0.975;
-                curY += step;
-                break;
-            case <= 16:
-                step = scaledSize / 12;
-                countX = 4;
-                rectSize = step * 0.975;
-                break;
-            case <= 20:
-                step = scaledSize / 15;
-                curY += step;
-                countX = 5;
-                rectSize = step * 0.975;
-                break;
-            case <= 25:
-                step = scaledSize / 15;
-                countX = 5;
-                rectSize = step * 0.975;
-                break;
-            case <= 30:
-                step = scaledSize / 18;
-                curY += step;
-                countX = 6;
-                rectSize = step * 0.975;
-                break;
-            case <= 36:
-                step = scaledSize / 18;
-                countX = 6;
-                rectSize = step * 0.975;
-                break;
-            case <= 42:
-                step = scaledSize / 21;
-                curY += step;
-                countX = 7;
-                rectSize = step * 0.975;
-                break;
-            case <= 49:
-                step = scaledSize / 21;
-                countX = 7;
-                rectSize = step * 0.975;
-                break;
-            case <= 54:
-                step = scaledSize / 24;
-                curY += step;
-                countX = 8;
-                rectSize = step * 0.975;
-                break;
-            case <= 64:
-                step = scaledSize / 24;
-                countX = 8;
-                rectSize = step * 0.975;
-                break;
-            case <= 72:
-                step = scaledSize / 27;
-                curY += step;
-                countX = 9;
-                rectSize = step * 0.975;
-                break;
-            default:
-                // We assume that for any case where stuff is being drawn like this that the maximum is 81 symbols
-                step = scaledSize / 27;
-                countX = 9;
-                rectSize = step * 0.975;
-                break;
-        }
-
-        var currentX = 0;
-        foreach (var (value, image) in symbols)
-        {
-            var sourceRect = new Rect(0, 0, image.Size.Width, image.Size.Height);
-            var destRect = new Rect(curX, curY, rectSize, rectSize);
-            _lastDrawnSymbols.Add((destRect, value));
-            context.DrawImage(image, sourceRect, destRect);
-            currentX += 1;
-            if (currentX == countX)
-            {
-                currentX = 0;
-                curX = origX;
-                curY += step;
-            }
-        }
-    }
+    public readonly SymbolDrawer<WaypointTrait> WaypointDrawer = new();
+    public readonly SymbolDrawer<FactionSymbol> FactionDrawer = new();
 
     private WaypointTrait? GetHoveredTrait(double mouseX, double mouseY)
     {
-        foreach (var (rect, obj) in _lastDrawnSymbols.Where(x => x.info is WaypointTrait))
+        foreach (var (rect, obj) in WaypointDrawer.LastDrawnSymbols)
         {
             if (rect.Contains(new Point(mouseX, mouseY)))
             {
-                return (WaypointTrait)obj;
+                return obj;
             }
         }
+
         return null;
     }
 
     private FactionSymbol? GetHoveredFactionSymbol(double mouseX, double mouseY)
     {
-        
-        foreach (var (rect, obj) in _lastDrawnSymbols.Where(x => x.info is FactionSymbol))
+        foreach (var (rect, obj) in FactionDrawer.LastDrawnSymbols)
         {
             if (rect.Contains(new Point(mouseX, mouseY)))
             {
-                return (FactionSymbol)obj;
+                return obj;
             }
         }
+
         return null;
     }
 

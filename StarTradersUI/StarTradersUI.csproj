@@ -21,4 +21,8 @@
     <ItemGroup>
       <ProjectReference Include="..\StarTradersUi.Api\StarTradersUi.Api.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Utilities\Interfaces\" />
+    </ItemGroup>
 </Project>
