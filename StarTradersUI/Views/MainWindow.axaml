@@ -13,18 +13,7 @@
         MinWidth="{Binding Path =#RootWindow.Height, Converter={x:Static controls:MyConverters.WindowSizeConverter}}"
         Loaded="Window_Loaded">
         <views:MainView/>
-        <!-- <controls:SystemDrawer Width="512" Height="512"> -->
-        <!--         <controls:SystemDrawer.Resources> -->
-        <!--                 <ContextMenu x:Key="Waypoint Context Menu"> -->
-        <!--                         <MenuItem Header="Fly to with currently selected ship"/> -->
-        <!--                         <MenuItem Header="View Waypoint Information In Popout"/> -->
-        <!--                 </ContextMenu> -->
-        <!--                 <ContextMenu x:Key="System Context Menu"> -->
-        <!--                         <MenuItem Header="Refresh System Waypoints"></MenuItem> -->
-        <!--                         <MenuItem Header="View System Information In Popout"/> -->
-        <!--                 </ContextMenu> -->
-        <!--         </controls:SystemDrawer.Resources> -->
-        <!-- </controls:SystemDrawer> -->
+ 
         <Window.Background>
                 <LinearGradientBrush StartPoint="0%,100%" EndPoint="100%,0%">
                         <GradientStop Color="#17153c" Offset="0.0"/>

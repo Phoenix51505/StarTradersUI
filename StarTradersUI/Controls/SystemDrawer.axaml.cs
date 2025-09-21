@@ -12,6 +12,7 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Media;
 using Avalonia.Threading;
 using StarTradersUI.Api;
+using StarTradersUI.Api.FactionInfo;
 using StarTradersUI.Api.SystemInfo;
 using StarTradersUI.Api.WaypointInfo;
 using StarTradersUI.Utilities;
@@ -50,8 +51,8 @@ public partial class SystemDrawer : UserControl
     // This is meant to draw the entire system, including waypoints when zoomed in far enough
 
 
-    public double ViewportCenterX = 377; // This will change
-    public double ViewportCenterY = -392; // This will change
+    public double ViewportCenterX = 201; // This will change
+    public double ViewportCenterY = 494; // This will change
     public double ViewportScale = 15; // MaxScale / 2; // This is the width of the Viewport in universe units
     public bool IsDragging;
 
@@ -59,17 +60,20 @@ public partial class SystemDrawer : UserControl
     private const double SystemViewUnloadUpp = 0.75;
 
     private const double MaxScale = 64000;
-    private const double MinScale = 1;
+    private const double MinScale = 0.1;
 
 
     private int _lastInvalidationType = 0;
     private const int InvalidationTypeZoomIn = 1;
     private const int InvalidationTypeRecalculate = 2;
 
-    private double CenterX => Width / 2;
-    private double CenterY => Height / 2;
+    private double ActualWidth => Bounds.Width;
+    private double ActualHeight => Bounds.Height;
 
-    private double UniverseUnitsPerPixel => ViewportScale / Width;
+    private double CenterX => ActualWidth / 2;
+    private double CenterY => ActualHeight / 2;
+
+    private double UniverseUnitsPerPixel => ViewportScale / ActualWidth;
 
 
     // Since we are going to draw waypoints at 1/10th the scale 
@@ -281,7 +285,7 @@ public partial class SystemDrawer : UserControl
     public override void Render(DrawingContext context)
     {
         base.Render(context);
-        context.FillRectangle(BackgroundBrush, new Rect(0, 0, Width, Height));
+        context.FillRectangle(BackgroundBrush, new Rect(0, 0, ActualWidth, ActualHeight));
         if (!_initialized)
         {
             var text = new FormattedText("Loading Systems .. Please Wait", CultureInfo.CurrentUICulture,
@@ -299,9 +303,9 @@ public partial class SystemDrawer : UserControl
             FlowDirection.LeftToRight, Typeface.Default, 12, WhiteDwarfDefaultBrush);
         context.DrawText(formattedText, new Point(10, 10));
 
-        var currentRenderBoundsQuery = (sx: ViewportCenterX - ViewportScale / 1.95,
-            sy: ViewportCenterY - ViewportScale / 1.95, ex: ViewportCenterX + ViewportScale / 1.95,
-            ey: ViewportCenterY + ViewportScale / 1.95);
+        var currentRenderBoundsQuery = (sx: ViewportCenterX - ViewportScale / 2 - 4,
+            sy: ViewportCenterY - ViewportScale / 2 - 4, ex: ViewportCenterX + ViewportScale / 2 + 4,
+            ey: ViewportCenterY + ViewportScale / 2 + 4);
 
         if (_lastInvalidationType == InvalidationTypeZoomIn)
         {
@@ -316,6 +320,10 @@ public partial class SystemDrawer : UserControl
             _currentSystems = enumerable.ToList();
         }
 
+        if (UniverseUnitsPerPixel <= SystemViewLoadUpp && _waypointParentSystemInfo == null)
+        {
+            DispatchWaypointUpdate(GlobalStates.SystemTree.ClosestTo(ViewportCenterX, ViewportCenterY)!);
+        }
         // Here is where we might want to redraw stuff the next frame
 
         foreach (var system in _currentSystems)
@@ -455,6 +463,63 @@ public partial class SystemDrawer : UserControl
         }
 
         context.DrawText(systemNameText, new Point(location.X - width / 2, topOfText));
+
+        if (UniverseUnitsPerPixel <= 0.1)
+        {
+            var oldFactionInfo = system.System.Factions;
+            DrawFactionsLarge(context, location, scaledSize, system);
+        }
+    }
+
+    private void DrawFactionsLarge(DrawingContext context, Point systemCenter, double scaledSize,
+        SystemInformation system)
+    {
+        if (system.System.Factions.Length == 0) return;
+        // We usually want the factions to take up a 1/3rd by 1/3rd area in the upper right corner
+        double step;
+        int countX = 0;
+        double rectSize;
+        var origX = systemCenter.X + scaledSize / 6;
+        var curX = origX;
+        var curY = (systemCenter.Y - (scaledSize / 2)) - (scaledSize / 3);
+        switch (system.System.Factions.Length)
+        {
+            case 1:
+                step = 0;
+                rectSize = scaledSize / 3;
+                break;
+            case <= 4:
+                step = scaledSize / 6;
+                countX = 2;
+                rectSize = step * 0.975;
+                break;
+            case <= 9:
+                step = scaledSize / 9;
+                countX = 3;
+                rectSize = step * 0.975;
+                break;
+            default:
+                step = scaledSize / 12;
+                countX = 4;
+                rectSize = step * 0.975;
+                break;
+        }
+
+        var currentX = 0;
+        foreach (var faction in system.System.Factions.Select(x => x.Symbol))
+        {
+            var image = FactionUtilities.GetFactionIcon(faction);
+            var sourceRect = new Rect(0, 0, image.Size.Width, image.Size.Height);
+            var destRect = new Rect(curX, curY, rectSize, rectSize);
+            context.DrawImage(image, sourceRect, destRect);
+            currentX += 1;
+            if (currentX == countX)
+            {
+                currentX = 0;
+                curX = origX;
+                curY += step;
+            }
+        }
     }
 
     private static readonly Brush BlackHoleLargerInside = new SolidColorBrush(new Color(255, 16, 16, 16));
@@ -665,7 +730,7 @@ public partial class SystemDrawer : UserControl
         var radius = Math.Sqrt((actualX - orbitCenterX) * (actualX - orbitCenterX) +
                                (actualY - orbitCenterY) * (actualY - orbitCenterY));
 
-        if (radius < 3 * Width)
+        if (radius < 3 * ActualWidth)
         {
             context.DrawEllipse(null, OrbitPen, new Point(orbitCenterX, orbitCenterY), radius, radius);
         }
